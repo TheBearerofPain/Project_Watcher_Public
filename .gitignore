@@ -72,3 +72,6 @@ Project_Watcher/Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+Project_Watcher/.vsconfig
+Project_Watcher/.idea/.idea.Project_Watcher/.idea/indexLayout.xml
+Project_Watcher/.idea/.idea.Project_Watcher/.idea/vcs.xml
