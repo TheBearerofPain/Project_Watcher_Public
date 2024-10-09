@@ -1,7 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
-
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
 #include "OnlineSessionSettings.h"
@@ -79,38 +78,45 @@ public:
 	/**
 	 * Used to Create a new game Session
 	 */
+	UFUNCTION(BlueprintCallable, Category = "Network Manager")
 	void CreateSession();
 
 	/**
 	 * Updates Session data
 	 */
+	UFUNCTION(BlueprintCallable, Category = "Network Manager")
 	void UpdateSession();
 
 	/**
 	 * Starts the session
 	 */
+	UFUNCTION(BlueprintCallable, Category = "Network Manager")
 	void StartSession() const;
 
 	/**
 	 * Ends the session
 	 */
+	UFUNCTION(BlueprintCallable, Category = "Network Manager")
 	void EndSession() const;
 
 	/**
 	 * Destroys the session
 	 */
+	UFUNCTION(BlueprintCallable, Category = "Network Manager")
 	void DestroySession() const;
 
 	/**
 	 * Finds Sessions
 	 * @param MaxSearchResults Max amount of sessions we want to find
 	 */
+	UFUNCTION(BlueprintCallable, Category = "Network Manager")
 	void FindSessions(const int32 MaxSearchResults);
 
 	/**
 	 * Tries to join the given session
 	 * @param SessionResult The session we want to join
 	 */
+	UFUNCTION(BlueprintCallable, Category = "Network Manager")
 	void JoinSession(USessionSearchResult * SessionResult) const;
 
 	/**
@@ -118,31 +124,46 @@ public:
 	 * in the current session
 	 * @return If we could server travel
 	 */
+	UFUNCTION(BlueprintCallable, Category = "Network Manager")
 	bool TryToServerTravelToCurrentSession() const;
 
 	//Network Interface calls//
 
 	//Network Interface Delegates//
-	
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnCreateSessionComplete OnCreateSessionComplete;
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnCreateSessionFailure OnCreateSessionFailure;
 
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnUpdateSessionComplete OnUpdateSessionComplete;
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnUpdateSessionFailure OnUpdateSessionFailure;
 
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnStartSessionComplete OnStartSessionComplete;
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnStartSessionFailure OnStartSessionFailure;
 
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnEndSessionComplete OnEndSessionComplete;
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnEndSessionFailure OnEndSessionFailure;
 
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnDestroySessionComplete OnDestroySessionComplete;
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnDestroySessionFailure OnDestroySessionFailure;
 
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnFindSessionsComplete OnFindSessionsComplete;
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnFindSessionsFailure OnFindSessionsFailure;
 
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnJoinSessionComplete OnJoinSessionComplete;
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Network Manager")
 	FNetworkManager_OnJoinSessionFailure OnJoinSessionFailure;
 
 	//Network Interface Delegates//
