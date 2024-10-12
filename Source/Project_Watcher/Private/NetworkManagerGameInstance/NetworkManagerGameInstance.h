@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Project Watcher 2024 & Beyond
 
 #pragma once
 #include "CoreMinimal.h"
@@ -9,6 +9,31 @@
 
 //Wrapper for BP data//
 
+USTRUCT(Blueprintable)
+struct FSessionData
+{
+	GENERATED_USTRUCT_BODY()
+public:
+	UPROPERTY(BlueprintReadWrite, Blueprintable, Category = "Online")
+	FString SessionName = "";
+	UPROPERTY(BlueprintReadWrite, Blueprintable, Category = "Online")
+	bool IsPrivate = false;
+	UPROPERTY(BlueprintReadWrite, Blueprintable, Category = "Online")
+	int32 OpenPlayerSlots = -1;
+	UPROPERTY(BlueprintReadWrite, Blueprintable, Category = "Online")
+	bool IsFull = false;
+
+	FSessionData(){}
+	
+	FSessionData(const FString& SessionNameIn, const bool IsPrivateIn, const int32 OpenPlayerSlotsIn, const bool IsFullIn)
+	{
+		SessionName = SessionNameIn;
+		IsPrivate = IsPrivateIn;
+		OpenPlayerSlots = OpenPlayerSlotsIn;
+		IsFull = IsFullIn;
+	}
+};
+
 UCLASS(BlueprintType)
 class USessionSearchResult : public UObject
 {
@@ -16,9 +41,25 @@ class USessionSearchResult : public UObject
 private:
 	FOnlineSessionSearchResult OnlineSessionSearchResult;
 public:
+	/**
+	 * Static Make function for constructing this UObject
+	 * @param OnlineSessionSearchResultIn The OnlineSessionSearchResult Data used to init this object
+	 * @return USessionSearchResult UObject
+	 */
 	static USessionSearchResult * Make(const FOnlineSessionSearchResult& OnlineSessionSearchResultIn);
 
+	/**
+	 * Used for getting the nested OnlineSessionSearchResult
+	 * @return FOnlineSessionSearchResult
+	 */
 	FOnlineSessionSearchResult GetOnlineSessionSearchResult();
+
+	/**
+	 * Gets the SessionData in a USTRUCT for UI Usage
+	 * @return The parsed USTRUCT session data
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Online")
+	FSessionData GetSessionData() const;
 };
 
 //Wrapper for BP data//
@@ -60,6 +101,25 @@ private:
 	TSharedPtr<FOnlineSessionSearch> SessionSearch;
 	
 	//Settings//
+
+private:
+
+	/* max players we allow in a session (advisable PeerToPeer limit) */
+	const int32 MaxPlayers = 8;
+	/* Lobby Level Name */
+	const FString LobbyMap = TEXT("Lobby Level Name");
+	/* Main Menu Level Name */
+	const FString MainMenuMap = TEXT("Main Menu Level Name");
+	/* Game Level Name */
+	const FString GameMap = TEXT("Game Level Name");
+
+private:
+	/**
+	 * Checker function used to make sure MaxPlayersIn = [1,8]
+	 * @param MaxPlayersIn MaxPlayers input by player
+	 * @return the corrected / verified MaxPlayersIn value
+	 */
+	int32 CheckPlayerCountInput(const int32 MaxPlayersIn) const;
 	
 public:
 
@@ -77,16 +137,18 @@ public:
 
 	/**
 	 * Used to Create a new game Session
+	 * @param PlayerCount The desired PlayerCount for this session
+	 * @param IsPrivate If the session is private or publicly joinable
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Network Manager")
-	void CreateSession();
+	void CreateSession(const int32 PlayerCount, const bool IsPrivate);
 
 	/**
 	 * Updates Session data
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Network Manager")
 	void UpdateSession();
-
+	
 	/**
 	 * Starts the session
 	 */
