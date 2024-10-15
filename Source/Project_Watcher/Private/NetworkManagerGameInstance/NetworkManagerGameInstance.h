@@ -107,11 +107,11 @@ private:
 	/* max players we allow in a session (advisable PeerToPeer limit) */
 	const int32 MaxPlayers = 8;
 	/* Lobby Level Name */
-	const FString LobbyMap = TEXT("Lobby_Map.umap");
+	const FString LobbyMap = TEXT("/Game/Core/Maps/Lobby_Map?listen");
 	/* Main Menu Level Name */
-	const FString MainMenuMap = TEXT("MainMenu_Map.umap");
+	const FString MainMenuMap = TEXT("/Game/Core/Maps/MainMenu_Map");
 	/* Game Level Name */
-	const FString GameMap = TEXT("Game_Map.umap");
+	const FString GameMap = TEXT("/Game/Core/Maps/Game_Map?listen");
 
 private:
 	/**
@@ -140,45 +140,45 @@ public:
 	 * @param PlayerCount The desired PlayerCount for this session
 	 * @param IsPrivate If the session is private or publicly joinable
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Network Manager")
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void CreateSession(const int32 PlayerCount, const bool IsPrivate);
 
 	/**
 	 * Updates Session data
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Network Manager")
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void UpdateSession();
 	
 	/**
 	 * Starts the session
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Network Manager")
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void StartSession() const;
 
 	/**
 	 * Ends the session
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Network Manager")
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void EndSession() const;
 
 	/**
 	 * Destroys the session
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Network Manager")
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void DestroySession() const;
 
 	/**
 	 * Finds Sessions
 	 * @param MaxSearchResults Max amount of sessions we want to find
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Network Manager")
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void FindSessions(const int32 MaxSearchResults);
 
 	/**
 	 * Tries to join the given session
 	 * @param SessionResult The session we want to join
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Network Manager")
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void JoinSession(USessionSearchResult * SessionResult) const;
 
 	/**
@@ -186,7 +186,7 @@ public:
 	 * in the current session
 	 * @return If we could server travel
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Network Manager")
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	bool TryToServerTravelToCurrentSession() const;
 
 	//Network Interface calls//

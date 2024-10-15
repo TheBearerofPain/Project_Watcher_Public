@@ -119,6 +119,7 @@ void UNetworkManagerGameInstance::CreateSession(const int32 PlayerCount, const b
 	SessionSettings->Set(SETTING_MAPNAME, FString(this->LobbyMap), EOnlineDataAdvertisementType::ViaOnlineService);
 
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+	//TODO Swap NAME_GameSession for SteamName instead for Unique SessionName!
 	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettings))
 	{
 		this->CallOnCreateSessionFailure(TEXT("Failed to create Session"));
@@ -233,13 +234,15 @@ void UNetworkManagerGameInstance::JoinSession(USessionSearchResult* SessionResul
 
 bool UNetworkManagerGameInstance::TryToServerTravelToCurrentSession() const
 {
-	const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
+	/*const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
 	if (!SessionInterface.IsValid())
 	{
 		return false;
-	}
+	}*/
 
-	FString ConnectString;
+	return GetWorld()->ServerTravel(this->LobbyMap);
+	
+	/*FString ConnectString;
 	if (!SessionInterface->GetResolvedConnectString(NAME_GameSession, ConnectString))
 	{
 		return false;
@@ -247,7 +250,7 @@ bool UNetworkManagerGameInstance::TryToServerTravelToCurrentSession() const
 
 	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
 	PlayerController->ClientTravel(ConnectString, TRAVEL_Absolute);
-	return true;
+	return true;*/
 }
 
 void UNetworkManagerGameInstance::SetupCallbacks()
