@@ -107,11 +107,11 @@ private:
 	/* max players we allow in a session (advisable PeerToPeer limit) */
 	const int32 MaxPlayers = 8;
 	/* Lobby Level Name */
-	const FString LobbyMap = TEXT("Lobby Level Name");
+	const FString LobbyMap = TEXT("Lobby_Map.umap");
 	/* Main Menu Level Name */
-	const FString MainMenuMap = TEXT("Main Menu Level Name");
+	const FString MainMenuMap = TEXT("MainMenu_Map.umap");
 	/* Game Level Name */
-	const FString GameMap = TEXT("Game Level Name");
+	const FString GameMap = TEXT("Game_Map.umap");
 
 private:
 	/**
