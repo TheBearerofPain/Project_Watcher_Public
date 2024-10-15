@@ -234,23 +234,7 @@ void UNetworkManagerGameInstance::JoinSession(USessionSearchResult* SessionResul
 
 bool UNetworkManagerGameInstance::TryToServerTravelToCurrentSession() const
 {
-	/*const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
-	if (!SessionInterface.IsValid())
-	{
-		return false;
-	}*/
-
 	return GetWorld()->ServerTravel(this->LobbyMap);
-	
-	/*FString ConnectString;
-	if (!SessionInterface->GetResolvedConnectString(NAME_GameSession, ConnectString))
-	{
-		return false;
-	}
-
-	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-	PlayerController->ClientTravel(ConnectString, TRAVEL_Absolute);
-	return true;*/
 }
 
 void UNetworkManagerGameInstance::SetupCallbacks()
