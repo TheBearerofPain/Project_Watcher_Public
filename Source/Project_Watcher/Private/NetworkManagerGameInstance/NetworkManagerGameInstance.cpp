@@ -28,6 +28,49 @@ FOnlineSessionSearchResult USessionSearchResult::GetOnlineSessionSearchResult()
 	return this->OnlineSessionSearchResult;
 }
 
+FSessionData USessionSearchResult::GetSessionData() const
+{
+	const FString SessionName = this->OnlineSessionSearchResult.Session.OwningUserName + "'s Session";
+	const bool IsFull = (this->OnlineSessionSearchResult.Session.NumOpenPrivateConnections <= 0) && (this->OnlineSessionSearchResult.Session.NumOpenPublicConnections <= 0);
+	int32 OpenPlayerSlots = 0;
+	bool IsPrivate = false;
+	
+	if (!IsFull)
+	{
+		if (this->OnlineSessionSearchResult.Session.NumOpenPrivateConnections > 0)
+		{
+			OpenPlayerSlots = this->OnlineSessionSearchResult.Session.NumOpenPrivateConnections;
+			IsPrivate = true;
+		}
+		else
+		{
+			OpenPlayerSlots = this->OnlineSessionSearchResult.Session.NumOpenPublicConnections;
+		}
+	}
+	
+	return FSessionData(SessionName, IsPrivate, OpenPlayerSlots, IsFull);
+}
+
+int32 UNetworkManagerGameInstance::CheckPlayerCountInput(const int32 MaxPlayersIn) const
+{
+	if (MaxPlayersIn >= 1 && MaxPlayersIn <= MaxPlayers)
+	{
+		return MaxPlayersIn;
+	}
+	else if (MaxPlayersIn > MaxPlayers)
+	{
+		UE_LOG(LogNetworkManager, Warning, TEXT("Desired Player count of: %d is greater than %d, setting to %d"), MaxPlayersIn, MaxPlayers, MaxPlayers);
+		return MaxPlayers;
+	}
+	else if (MaxPlayersIn < 1)
+	{
+		UE_LOG(LogNetworkManager, Warning, TEXT("Desired Player count of: %d is less than 1, setting to 1"), MaxPlayersIn);
+		return 1;
+	}
+	
+	return 1;
+}
+
 void UNetworkManagerGameInstance::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
@@ -39,8 +82,11 @@ void UNetworkManagerGameInstance::Deinitialize()
 	Super::Deinitialize();
 }
 
-void UNetworkManagerGameInstance::CreateSession()
+void UNetworkManagerGameInstance::CreateSession(const int32 PlayerCount, const bool IsPrivate)
 {
+
+	const int32 VerifiedPlayerCount = this->CheckPlayerCountInput(PlayerCount);
+	
 	const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
 	
 	if (!SessionInterface.IsValid())
@@ -50,19 +96,30 @@ void UNetworkManagerGameInstance::CreateSession()
 	}
 
 	SessionSettings = MakeShareable(new FOnlineSessionSettings());
-	SessionSettings->NumPrivateConnections = 0;
-	SessionSettings->NumPublicConnections = 8;//TODO set this as a configuration constant
+
+	if (IsPrivate)
+	{
+		SessionSettings->NumPrivateConnections = VerifiedPlayerCount;
+		SessionSettings->NumPublicConnections = 0;
+	}
+	else
+	{
+		SessionSettings->NumPrivateConnections = 0;
+		SessionSettings->NumPublicConnections = VerifiedPlayerCount;
+	}
+	
 	SessionSettings->bAllowInvites = true;
 	SessionSettings->bAllowJoinInProgress = true;
 	SessionSettings->bAllowJoinViaPresence = true;
 	SessionSettings->bAllowJoinViaPresenceFriendsOnly = true;
 	SessionSettings->bIsDedicated = false;
 	SessionSettings->bUsesPresence = true;
-	SessionSettings->bIsLANMatch = false;//TODO how do we want to handle this?
+	SessionSettings->bIsLANMatch = false;
 	SessionSettings->bShouldAdvertise = true;
-	SessionSettings->Set(SETTING_MAPNAME, FString("Your Level Name"), EOnlineDataAdvertisementType::ViaOnlineService);
+	SessionSettings->Set(SETTING_MAPNAME, FString(this->MainMenuMap), EOnlineDataAdvertisementType::ViaOnlineService);
 
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+	//TODO Swap NAME_GameSession for SteamName instead for Unique SessionName!
 	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettings))
 	{
 		this->CallOnCreateSessionFailure(TEXT("Failed to create Session"));
@@ -148,7 +205,7 @@ void UNetworkManagerGameInstance::FindSessions(const int32 MaxSearchResults)
 
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
 	SessionSearch->MaxSearchResults = MaxSearchResults;
-	SessionSearch->bIsLanQuery = false;//TODO deal with Lan setup
+	SessionSearch->bIsLanQuery = false;
 
 	SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
 
@@ -177,21 +234,8 @@ void UNetworkManagerGameInstance::JoinSession(USessionSearchResult* SessionResul
 
 bool UNetworkManagerGameInstance::TryToServerTravelToCurrentSession() const
 {
-	const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
-	if (!SessionInterface.IsValid())
-	{
-		return false;
-	}
-
-	FString ConnectString;
-	if (!SessionInterface->GetResolvedConnectString(NAME_GameSession, ConnectString))
-	{
-		return false;
-	}
-
-	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-	PlayerController->ClientTravel(ConnectString, TRAVEL_Absolute);
-	return true;
+	//Non seamless travel
+	return GetWorld()->ServerTravel(this->MainMenuMap);
 }
 
 void UNetworkManagerGameInstance::SetupCallbacks()
@@ -439,8 +483,9 @@ void UNetworkManagerGameInstance::OnDestroySessionCompletionHandler(const FName 
 void UNetworkManagerGameInstance::OnFindSessionsCompletionHandler(const bool Successful) const
 {
 	if (Successful)
-	{
+	{		
 		TArray<USessionSearchResult*> FoundSessions;
+		
 		for (FOnlineSessionSearchResult SearchResult : SessionSearch->SearchResults)
 		{
 			FoundSessions.Add(USessionSearchResult::Make(SearchResult));
