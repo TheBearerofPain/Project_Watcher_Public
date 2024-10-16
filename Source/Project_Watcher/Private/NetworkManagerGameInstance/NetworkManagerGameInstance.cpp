@@ -116,7 +116,7 @@ void UNetworkManagerGameInstance::CreateSession(const int32 PlayerCount, const b
 	SessionSettings->bUsesPresence = true;
 	SessionSettings->bIsLANMatch = false;
 	SessionSettings->bShouldAdvertise = true;
-	SessionSettings->Set(SETTING_MAPNAME, FString(this->LobbyMap), EOnlineDataAdvertisementType::ViaOnlineService);
+	SessionSettings->Set(SETTING_MAPNAME, FString(this->MainMenuMap), EOnlineDataAdvertisementType::ViaOnlineService);
 
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	//TODO Swap NAME_GameSession for SteamName instead for Unique SessionName!
@@ -234,7 +234,8 @@ void UNetworkManagerGameInstance::JoinSession(USessionSearchResult* SessionResul
 
 bool UNetworkManagerGameInstance::TryToServerTravelToCurrentSession() const
 {
-	return GetWorld()->ServerTravel(this->LobbyMap);
+	//Non seamless travel
+	return GetWorld()->ServerTravel(this->MainMenuMap);
 }
 
 void UNetworkManagerGameInstance::SetupCallbacks()
