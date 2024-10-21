@@ -108,6 +108,8 @@ private:
 	const int32 MaxPlayers = 8;
 	/* Main Menu Level Name */
 	const FString MainMenuMap = TEXT("/Game/Core/Maps/MainMenu_Map?listen");
+	/* Main Game Level Name */
+	const FString MainGameMap = TEXT("/Game/Core/Maps/MainGame_Map?listen");
 
 private:
 	/**

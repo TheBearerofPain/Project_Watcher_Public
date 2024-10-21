@@ -84,9 +84,7 @@ void UNetworkManagerGameInstance::Deinitialize()
 
 void UNetworkManagerGameInstance::CreateSession(const int32 PlayerCount, const bool IsPrivate)
 {
-
 	const int32 VerifiedPlayerCount = this->CheckPlayerCountInput(PlayerCount);
-	
 	const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
 	
 	if (!SessionInterface.IsValid())
@@ -96,30 +94,21 @@ void UNetworkManagerGameInstance::CreateSession(const int32 PlayerCount, const b
 	}
 
 	SessionSettings = MakeShareable(new FOnlineSessionSettings());
-
-	if (IsPrivate)
-	{
-		SessionSettings->NumPrivateConnections = VerifiedPlayerCount;
-		SessionSettings->NumPublicConnections = 0;
-	}
-	else
-	{
-		SessionSettings->NumPrivateConnections = 0;
-		SessionSettings->NumPublicConnections = VerifiedPlayerCount;
-	}
-	
+	SessionSettings->NumPublicConnections = 8;
 	SessionSettings->bAllowInvites = true;
 	SessionSettings->bAllowJoinInProgress = true;
 	SessionSettings->bAllowJoinViaPresence = true;
-	SessionSettings->bAllowJoinViaPresenceFriendsOnly = true;
 	SessionSettings->bIsDedicated = false;
 	SessionSettings->bUsesPresence = true;
-	SessionSettings->bIsLANMatch = false;
+	SessionSettings->bIsLANMatch = false;//Online::GetSubsystem(GetWorld())->GetSubsystemName() == "NULL";
 	SessionSettings->bShouldAdvertise = true;
+	SessionSettings->bUseLobbiesIfAvailable = true;
 	SessionSettings->Set(SETTING_MAPNAME, FString(this->MainMenuMap), EOnlineDataAdvertisementType::ViaOnlineService);
 
+	//Few bugs to address 1) when a server travel occurs it appears that I don't join
+	//need to assess load order on things
+	
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	//TODO Swap NAME_GameSession for SteamName instead for Unique SessionName!
 	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettings))
 	{
 		this->CallOnCreateSessionFailure(TEXT("Failed to create Session"));
@@ -235,7 +224,7 @@ void UNetworkManagerGameInstance::JoinSession(USessionSearchResult* SessionResul
 bool UNetworkManagerGameInstance::TryToServerTravelToCurrentSession() const
 {
 	//Non seamless travel
-	return GetWorld()->ServerTravel(this->MainMenuMap);
+	return GetWorld()->ServerTravel(this->MainGameMap);
 }
 
 void UNetworkManagerGameInstance::SetupCallbacks()
