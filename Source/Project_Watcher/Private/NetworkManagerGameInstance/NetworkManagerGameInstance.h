@@ -99,6 +99,8 @@ private:
 	TSharedPtr<FOnlineSessionSettings> SessionSettings;
 
 	TSharedPtr<FOnlineSessionSearch> SessionSearch;
+
+	FName Cached_SessionName = TEXT("Default Game Session");
 	
 	//Settings//
 

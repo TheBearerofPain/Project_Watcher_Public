@@ -107,9 +107,10 @@ void UNetworkManagerGameInstance::CreateSession(const int32 PlayerCount, const b
 
 	//Few bugs to address 1) when a server travel occurs it appears that I don't join
 	//need to assess load order on things
-	
+
+	this->Cached_SessionName = FName(*(Online::GetIdentityInterface(GetWorld())->GetPlayerNickname(0) + "'s Session"));
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettings))
+	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), this->Cached_SessionName, *SessionSettings))
 	{
 		this->CallOnCreateSessionFailure(TEXT("Failed to create Session"));
 	}
@@ -147,7 +148,7 @@ void UNetworkManagerGameInstance::StartSession() const
 		return;
 	}
 
-	if (!SessionInterface->StartSession(NAME_GameSession))
+	if (!SessionInterface->StartSession(this->Cached_SessionName))
 	{
 		this->CallOnStartSessionFailure(TEXT("Failed to start session"));
 	}
