@@ -51,6 +51,12 @@ FSessionData USessionSearchResult::GetSessionData() const
 	return FSessionData(SessionName, IsPrivate, OpenPlayerSlots, IsFull);
 }
 
+FString UNetworkManagerGameInstance::BuildMainGameMapPathForHosting() const
+{
+	const FString HostName = Online::GetIdentityInterface(GetWorld())->GetPlayerNickname(0);
+	return this->MainGameMap + "?Name=" + HostName + "?listen";
+}
+
 int32 UNetworkManagerGameInstance::CheckPlayerCountInput(const int32 MaxPlayersIn) const
 {
 	if (MaxPlayersIn >= 1 && MaxPlayersIn <= MaxPlayers)
@@ -100,13 +106,10 @@ void UNetworkManagerGameInstance::CreateSession(const int32 PlayerCount, const b
 	SessionSettings->bAllowJoinViaPresence = true;
 	SessionSettings->bIsDedicated = false;
 	SessionSettings->bUsesPresence = true;
-	SessionSettings->bIsLANMatch = false;//Online::GetSubsystem(GetWorld())->GetSubsystemName() == "NULL";
+	SessionSettings->bIsLANMatch = false;
 	SessionSettings->bShouldAdvertise = true;
 	SessionSettings->bUseLobbiesIfAvailable = true;
-	SessionSettings->Set(SETTING_MAPNAME, FString(this->MainMenuMap), EOnlineDataAdvertisementType::ViaOnlineService);
-
-	//Few bugs to address 1) when a server travel occurs it appears that I don't join
-	//need to assess load order on things
+	SessionSettings->Set(SETTING_MAPNAME, FString(this->MainGameMap), EOnlineDataAdvertisementType::ViaOnlineService);
 
 	this->Cached_SessionName = FName(*(Online::GetIdentityInterface(GetWorld())->GetPlayerNickname(0) + "'s Session"));
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
@@ -222,7 +225,13 @@ void UNetworkManagerGameInstance::JoinSession(USessionSearchResult* SessionResul
 	}
 }
 
-bool UNetworkManagerGameInstance::TryToServerTravelToCurrentSession() const
+bool UNetworkManagerGameInstance::ServerTravelAsHost_GameMap() const
+{
+	//Non seamless travel
+	return GetWorld()->ServerTravel(this->BuildMainGameMapPathForHosting());
+}
+
+bool UNetworkManagerGameInstance::ServerTravelAsClient_GameMap() const
 {
 	//Non seamless travel
 	return GetWorld()->ServerTravel(this->MainGameMap);

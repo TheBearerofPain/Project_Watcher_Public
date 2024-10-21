@@ -111,8 +111,11 @@ private:
 	/* Main Menu Level Name */
 	const FString MainMenuMap = TEXT("/Game/Core/Maps/MainMenu_Map?listen");
 	/* Main Game Level Name */
-	const FString MainGameMap = TEXT("/Game/Core/Maps/MainGame_Map?listen");
+	const FString MainGameMap = TEXT("/Game/Core/Maps/MainGame_Map");
 
+	/* Main Game Level path used for hosting */
+	FString BuildMainGameMapPathForHosting() const;
+	
 private:
 	/**
 	 * Checker function used to make sure MaxPlayersIn = [1,8]
@@ -181,13 +184,15 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void JoinSession(USessionSearchResult * SessionResult) const;
 
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
+	bool ServerTravelAsHost_GameMap() const;
+	
 	/**
-	 * Try to server travel to the current map
-	 * in the current session
+	 * Try to server travel to the current map in the current session
 	 * @return If we could server travel
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
-	bool TryToServerTravelToCurrentSession() const;
+	bool ServerTravelAsClient_GameMap() const;
 
 	//Network Interface calls//
 
