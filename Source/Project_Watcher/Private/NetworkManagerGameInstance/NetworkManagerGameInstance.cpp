@@ -209,7 +209,7 @@ void UNetworkManagerGameInstance::FindSessions(const int32 MaxSearchResults)
 	}
 }
 
-void UNetworkManagerGameInstance::JoinSession(USessionSearchResult* SessionResult) const
+void UNetworkManagerGameInstance::JoinSession(USessionSearchResult* SessionResult)
 {
 	const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
 	if (!SessionInterface.IsValid())
@@ -218,8 +218,10 @@ void UNetworkManagerGameInstance::JoinSession(USessionSearchResult* SessionResul
 		return;
 	}
 
+	this->Cached_SessionName = FName(*SessionResult->GetSessionData().SessionName);
+	
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SessionResult->GetOnlineSessionSearchResult()))
+	if (!SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), this->Cached_SessionName, SessionResult->GetOnlineSessionSearchResult()))
 	{
 		this->CallOnJoinSessionFailure(TEXT("Error joining Session"));
 	}

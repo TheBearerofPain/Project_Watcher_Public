@@ -182,13 +182,17 @@ public:
 	 * @param SessionResult The session we want to join
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
-	void JoinSession(USessionSearchResult * SessionResult) const;
+	void JoinSession(USessionSearchResult * SessionResult);
 
+	/**
+	 * Try to server travel to the current map in the current session as a host
+	 * @return If we could server travel
+	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	bool ServerTravelAsHost_GameMap() const;
 	
 	/**
-	 * Try to server travel to the current map in the current session
+	 * Try to server travel to the current map in the current session as a client
 	 * @return If we could server travel
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
