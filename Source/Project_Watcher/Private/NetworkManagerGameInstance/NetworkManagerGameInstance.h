@@ -179,13 +179,13 @@ public:
 	void StartSession() const;
 
 	/**
-	 * Ends the session
+	 * Ends the session, Graceful shutdown notifies players in advance
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void EndSession() const;
 
 	/**
-	 * Destroys the session
+	 * Destroys the session, hard shutdown
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void DestroySession() const;
