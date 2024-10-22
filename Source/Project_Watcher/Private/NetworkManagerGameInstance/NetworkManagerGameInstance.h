@@ -101,6 +101,8 @@ private:
 	TSharedPtr<FOnlineSessionSearch> SessionSearch;
 
 	FName Cached_SessionName = TEXT("Default Game Session");
+
+	FOnlineSessionSearchResult Cached_JoinedSession;
 	
 	//Settings//
 
@@ -115,6 +117,9 @@ private:
 
 	/* Main Game Level path used for hosting */
 	FString BuildMainGameMapPathForHosting() const;
+
+	/* Main Game Level path used for joining */
+	FString BuildMainGameMapPathForJoining() const;
 	
 private:
 	/**

@@ -57,6 +57,21 @@ FString UNetworkManagerGameInstance::BuildMainGameMapPathForHosting() const
 	return this->MainGameMap + "?Name=" + HostName + "?listen";
 }
 
+FString UNetworkManagerGameInstance::BuildMainGameMapPathForJoining() const
+{
+	IOnlineSessionPtr Session = Online::GetSessionInterface(GetWorld());
+	if (Session.IsValid())
+	{
+		FString JoinUrl;
+		if (Session->GetResolvedConnectString(this->Cached_SessionName ,JoinUrl))
+		{
+			UE_LOG(LogNetworkManager, Display, TEXT("Client Join path: %s"), *JoinUrl);
+			return JoinUrl;
+		}
+	}
+	return FString();
+}
+
 int32 UNetworkManagerGameInstance::CheckPlayerCountInput(const int32 MaxPlayersIn) const
 {
 	if (MaxPlayersIn >= 1 && MaxPlayersIn <= MaxPlayers)
@@ -211,6 +226,8 @@ void UNetworkManagerGameInstance::FindSessions(const int32 MaxSearchResults)
 
 void UNetworkManagerGameInstance::JoinSession(USessionSearchResult* SessionResult)
 {
+	this->Cached_JoinedSession = SessionResult->GetOnlineSessionSearchResult();
+	
 	const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
 	if (!SessionInterface.IsValid())
 	{
@@ -238,7 +255,7 @@ bool UNetworkManagerGameInstance::ServerTravelAsClient_GameMap() const
 	//Non seamless travel
 	if (APlayerController * PlayerController = GetWorld()->GetFirstPlayerController())
 	{
-		PlayerController->ClientTravel(this->MainGameMap, TRAVEL_Absolute);
+		PlayerController->ClientTravel(this->BuildMainGameMapPathForJoining(), TRAVEL_Absolute);
 		return true;
 	}
 	
