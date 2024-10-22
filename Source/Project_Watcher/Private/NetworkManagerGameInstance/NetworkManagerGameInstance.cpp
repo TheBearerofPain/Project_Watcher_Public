@@ -236,7 +236,13 @@ bool UNetworkManagerGameInstance::ServerTravelAsHost_GameMap() const
 bool UNetworkManagerGameInstance::ServerTravelAsClient_GameMap() const
 {
 	//Non seamless travel
-	return GetWorld()->ServerTravel(this->MainGameMap);
+	if (APlayerController * PlayerController = GetWorld()->GetFirstPlayerController())
+	{
+		PlayerController->ClientTravel(this->MainGameMap, TRAVEL_Absolute);
+		return true;
+	}
+	
+	return false;
 }
 
 void UNetworkManagerGameInstance::SetupCallbacks()
