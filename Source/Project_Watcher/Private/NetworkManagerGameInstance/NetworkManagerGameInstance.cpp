@@ -51,6 +51,37 @@ FSessionData USessionSearchResult::GetSessionData() const
 	return FSessionData(SessionName, IsPrivate, OpenPlayerSlots, IsFull);
 }
 
+void UNetworkManagerGameInstance::SetSessionName(const FName NewSessionName)
+{
+	this->SessionName = NewSessionName;
+}
+
+FName UNetworkManagerGameInstance::GetSessionName() const
+{
+	return this->SessionName;
+}
+
+FString UNetworkManagerGameInstance::BuildMainGameMapPathForHosting() const
+{
+	const FString HostName = Online::GetIdentityInterface(GetWorld())->GetPlayerNickname(0);
+	return this->MainGameMap + "?Name=" + HostName + "?listen";
+}
+
+FString UNetworkManagerGameInstance::BuildMainGameMapPathForJoining() const
+{
+	IOnlineSessionPtr Session = Online::GetSessionInterface(GetWorld());
+	if (Session.IsValid())
+	{
+		FString JoinUrl;
+		if (Session->GetResolvedConnectString(this->GetSessionName() ,JoinUrl))
+		{
+			UE_LOG(LogNetworkManager, Display, TEXT("Client Join path: %s"), *JoinUrl);
+			return JoinUrl;
+		}
+	}
+	return FString();
+}
+
 int32 UNetworkManagerGameInstance::CheckPlayerCountInput(const int32 MaxPlayersIn) const
 {
 	if (MaxPlayersIn >= 1 && MaxPlayersIn <= MaxPlayers)
@@ -84,9 +115,7 @@ void UNetworkManagerGameInstance::Deinitialize()
 
 void UNetworkManagerGameInstance::CreateSession(const int32 PlayerCount, const bool IsPrivate)
 {
-
 	const int32 VerifiedPlayerCount = this->CheckPlayerCountInput(PlayerCount);
-	
 	const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
 	
 	if (!SessionInterface.IsValid())
@@ -96,31 +125,22 @@ void UNetworkManagerGameInstance::CreateSession(const int32 PlayerCount, const b
 	}
 
 	SessionSettings = MakeShareable(new FOnlineSessionSettings());
-
-	if (IsPrivate)
-	{
-		SessionSettings->NumPrivateConnections = VerifiedPlayerCount;
-		SessionSettings->NumPublicConnections = 0;
-	}
-	else
-	{
-		SessionSettings->NumPrivateConnections = 0;
-		SessionSettings->NumPublicConnections = VerifiedPlayerCount;
-	}
-	
+	SessionSettings->NumPublicConnections = 8; //TODO Re enable private VS Public Lobbies
 	SessionSettings->bAllowInvites = true;
 	SessionSettings->bAllowJoinInProgress = true;
-	SessionSettings->bAllowJoinViaPresence = true;
+	SessionSettings->bAllowJoinViaPresence = true;//TODO Test joining via presence / using typical steam joining techniques
 	SessionSettings->bAllowJoinViaPresenceFriendsOnly = true;
 	SessionSettings->bIsDedicated = false;
 	SessionSettings->bUsesPresence = true;
 	SessionSettings->bIsLANMatch = false;
 	SessionSettings->bShouldAdvertise = true;
-	SessionSettings->Set(SETTING_MAPNAME, FString(this->MainMenuMap), EOnlineDataAdvertisementType::ViaOnlineService);
+	SessionSettings->bUseLobbiesIfAvailable = true;
+	SessionSettings->Set(SETTING_MAPNAME, FString(this->MainGameMap), EOnlineDataAdvertisementType::ViaOnlineService);
 
+	this->SetSessionName(FName(*(Online::GetIdentityInterface(GetWorld())->GetPlayerNickname(0) + "'s Session")));
+	
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	//TODO Swap NAME_GameSession for SteamName instead for Unique SessionName!
-	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettings))
+	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), this->GetSessionName(), *SessionSettings))
 	{
 		this->CallOnCreateSessionFailure(TEXT("Failed to create Session"));
 	}
@@ -139,7 +159,7 @@ void UNetworkManagerGameInstance::UpdateSession()
 	const TSharedPtr<FOnlineSessionSettings> UpdatedSessionSettings = MakeShareable(new FOnlineSessionSettings(*SessionSettings));
 	UpdatedSessionSettings->Set(SETTING_MAPNAME, FString("Updated Level Name"), EOnlineDataAdvertisementType::ViaOnlineService);
 
-	if (!SessionInterface->UpdateSession(NAME_GameSession, *UpdatedSessionSettings))
+	if (!SessionInterface->UpdateSession(this->GetSessionName(), *UpdatedSessionSettings))
 	{
 		this->CallOnUpdateSessionFailure(TEXT("Failed to update session"));
 	}
@@ -158,7 +178,7 @@ void UNetworkManagerGameInstance::StartSession() const
 		return;
 	}
 
-	if (!SessionInterface->StartSession(NAME_GameSession))
+	if (!SessionInterface->StartSession(this->GetSessionName()))
 	{
 		this->CallOnStartSessionFailure(TEXT("Failed to start session"));
 	}
@@ -173,7 +193,7 @@ void UNetworkManagerGameInstance::EndSession() const
 		return;
 	}
 
-	if (!sessionInterface->EndSession(NAME_GameSession))
+	if (!sessionInterface->EndSession(this->GetSessionName()))
 	{
 		this->CallOnEndSessionFailure(TEXT("Failed to end session"));
 	}
@@ -188,7 +208,7 @@ void UNetworkManagerGameInstance::DestroySession() const
 		return;
 	}
 
-	if (!SessionInterface->DestroySession(NAME_GameSession))
+	if (!SessionInterface->DestroySession(this->GetSessionName()))
 	{
 		this->CallOnDestroySessionFailure(TEXT("Failed to destroy session"));
 	}
@@ -216,26 +236,41 @@ void UNetworkManagerGameInstance::FindSessions(const int32 MaxSearchResults)
 	}
 }
 
-void UNetworkManagerGameInstance::JoinSession(USessionSearchResult* SessionResult) const
+void UNetworkManagerGameInstance::JoinSession(USessionSearchResult* SessionResult)
 {
+	this->SessionData = SessionResult->GetOnlineSessionSearchResult();
+	this->SetSessionName(FName(*SessionResult->GetSessionData().SessionName));
+	
 	const IOnlineSessionPtr SessionInterface = Online::GetSessionInterface(GetWorld());
 	if (!SessionInterface.IsValid())
 	{
 		this->CallOnJoinSessionFailure(TEXT("SessionInterface is invalid"));
 		return;
 	}
-
+	
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SessionResult->GetOnlineSessionSearchResult()))
+	if (!SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), this->GetSessionName(), SessionResult->GetOnlineSessionSearchResult()))
 	{
 		this->CallOnJoinSessionFailure(TEXT("Error joining Session"));
 	}
 }
 
-bool UNetworkManagerGameInstance::TryToServerTravelToCurrentSession() const
+bool UNetworkManagerGameInstance::ServerTravelAsHost_GameMap() const
 {
 	//Non seamless travel
-	return GetWorld()->ServerTravel(this->MainMenuMap);
+	return GetWorld()->ServerTravel(this->BuildMainGameMapPathForHosting());
+}
+
+bool UNetworkManagerGameInstance::ServerTravelAsClient_GameMap() const
+{
+	//Non seamless travel
+	if (APlayerController * PlayerController = GetWorld()->GetFirstPlayerController())
+	{
+		PlayerController->ClientTravel(this->BuildMainGameMapPathForJoining(), TRAVEL_Absolute);
+		return true;
+	}
+	
+	return false;
 }
 
 void UNetworkManagerGameInstance::SetupCallbacks()
@@ -420,11 +455,11 @@ void UNetworkManagerGameInstance::CallOnJoinSessionFailure(const FString& Failur
 	}
 }
 
-void UNetworkManagerGameInstance::OnCreateSessionCompletionHandler(const FName SessionName, const bool Successful) const
+void UNetworkManagerGameInstance::OnCreateSessionCompletionHandler(const FName SessionNameIn, const bool Successful) const
 {
 	if (Successful)
 	{
-		this->CallOnCreateSessionComplete(SessionName);
+		this->CallOnCreateSessionComplete(SessionNameIn);
 	}
 	else
 	{
@@ -432,11 +467,11 @@ void UNetworkManagerGameInstance::OnCreateSessionCompletionHandler(const FName S
 	}
 }
 
-void UNetworkManagerGameInstance::OnUpdateSessionCompletionHandler(const FName SessionName, const bool Successful) const
+void UNetworkManagerGameInstance::OnUpdateSessionCompletionHandler(const FName SessionNameIn, const bool Successful) const
 {
 	if (Successful)
 	{
-		this->CallOnUpdateSessionComplete(SessionName);
+		this->CallOnUpdateSessionComplete(SessionNameIn);
 	}
 	else
 	{
@@ -444,11 +479,11 @@ void UNetworkManagerGameInstance::OnUpdateSessionCompletionHandler(const FName S
 	}
 }
 
-void UNetworkManagerGameInstance::OnStartSessionCompletionHandler(const FName SessionName, const bool Successful) const
+void UNetworkManagerGameInstance::OnStartSessionCompletionHandler(const FName SessionNameIn, const bool Successful) const
 {
 	if (Successful)
 	{
-		this->CallOnStartSessionComplete(SessionName);
+		this->CallOnStartSessionComplete(SessionNameIn);
 	}
 	else
 	{
@@ -456,11 +491,11 @@ void UNetworkManagerGameInstance::OnStartSessionCompletionHandler(const FName Se
 	}
 }
 
-void UNetworkManagerGameInstance::OnEndSessionCompletionHandler(const FName SessionName, const bool Successful) const
+void UNetworkManagerGameInstance::OnEndSessionCompletionHandler(const FName SessionNameIn, const bool Successful) const
 {
 	if (Successful)
 	{
-		this->CallOnEndSessionComplete(SessionName);
+		this->CallOnEndSessionComplete(SessionNameIn);
 	}
 	else
 	{
@@ -468,11 +503,11 @@ void UNetworkManagerGameInstance::OnEndSessionCompletionHandler(const FName Sess
 	}
 }
 
-void UNetworkManagerGameInstance::OnDestroySessionCompletionHandler(const FName SessionName, const bool Successful) const
+void UNetworkManagerGameInstance::OnDestroySessionCompletionHandler(const FName SessionNameIn, const bool Successful) const
 {
 	if (Successful)
 	{
-		this->CallOnDestroySessionComplete(SessionName);
+		this->CallOnDestroySessionComplete(SessionNameIn);
 	}
 	else
 	{
@@ -506,12 +541,12 @@ void UNetworkManagerGameInstance::OnFindSessionsCompletionHandler(const bool Suc
 	}
 }
 
-void UNetworkManagerGameInstance::OnJoinSessionCompletionHandler(const FName SessionName, const EOnJoinSessionCompleteResult::Type Result) const
+void UNetworkManagerGameInstance::OnJoinSessionCompletionHandler(const FName SessionNameIn, const EOnJoinSessionCompleteResult::Type Result) const
 {
 	switch(Result)
 	{
 	case EOnJoinSessionCompleteResult::Type::Success:
-		this->CallOnJoinSessionComplete(SessionName);
+		this->CallOnJoinSessionComplete(SessionNameIn);
 		break;
 	case EOnJoinSessionCompleteResult::Type::SessionIsFull:
 		this->CallOnJoinSessionFailure(TEXT("Session is full"));

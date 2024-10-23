@@ -95,10 +95,28 @@ class UNetworkManagerGameInstance : public UGameInstanceSubsystem
 	GENERATED_BODY()
 private:
 	//Settings//
-	
+
+	/* SessionSettings established by host */
 	TSharedPtr<FOnlineSessionSettings> SessionSettings;
 
+	/* SessionSearch Results by clients */
 	TSharedPtr<FOnlineSessionSearch> SessionSearch;
+
+	/* The name of the session we are a part of, gets set on JoinSession (Client) or CreateSession (Host) */
+	FName SessionName = TEXT("Default Game Session");
+
+	/* Access / Mutators for ease of code checking */
+
+	/* Updates the SessionName */
+	void SetSessionName(const FName NewSessionName);
+
+	/* Retrieves the SessionName */
+	FName GetSessionName() const;
+
+	/* Access / Mutators for ease of code checking */
+	
+	/* The data of the session we are a part of from the perspective of the client */
+	FOnlineSessionSearchResult SessionData;
 	
 	//Settings//
 
@@ -106,13 +124,17 @@ private:
 
 	/* max players we allow in a session (advisable PeerToPeer limit) */
 	const int32 MaxPlayers = 8;
-	/* Lobby Level Name */
-	//const FString LobbyMap = TEXT("/Game/Core/Maps/SubLevels/Lobby_Map");
 	/* Main Menu Level Name */
 	const FString MainMenuMap = TEXT("/Game/Core/Maps/MainMenu_Map");
-	/* Game Level Name */
-	//const FString GameMap = TEXT("/Game/Core/Maps/SubLevels/Game_Map");
+	/* Main Game Level Name */
+	const FString MainGameMap = TEXT("/Game/Core/Maps/MainGame_Map");
 
+	/* Main Game Level path used for hosting */
+	FString BuildMainGameMapPathForHosting() const;
+
+	/* Main Game Level path used for joining */
+	FString BuildMainGameMapPathForJoining() const;
+	
 private:
 	/**
 	 * Checker function used to make sure MaxPlayersIn = [1,8]
@@ -138,7 +160,7 @@ public:
 	/**
 	 * Used to Create a new game Session
 	 * @param PlayerCount The desired PlayerCount for this session
-	 * @param IsPrivate If the session is private or publicly joinable
+	 * @param IsPrivate If the session is private or publicly join-able
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void CreateSession(const int32 PlayerCount, const bool IsPrivate);
@@ -146,7 +168,8 @@ public:
 	/**
 	 * Updates Session data
 	 */
-	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
+	//UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
+	/* This function will remain hidden until such a need arises, for now it's function is undetermined */
 	void UpdateSession();
 	
 	/**
@@ -156,13 +179,13 @@ public:
 	void StartSession() const;
 
 	/**
-	 * Ends the session
+	 * Ends the session, Graceful shutdown notifies players in advance
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void EndSession() const;
 
 	/**
-	 * Destroys the session
+	 * Destroys the session, hard shutdown
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
 	void DestroySession() const;
@@ -179,15 +202,21 @@ public:
 	 * @param SessionResult The session we want to join
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
-	void JoinSession(USessionSearchResult * SessionResult) const;
+	void JoinSession(USessionSearchResult * SessionResult);
 
 	/**
-	 * Try to server travel to the current map
-	 * in the current session
+	 * Try to server travel to the current map in the current session as a host
 	 * @return If we could server travel
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
-	bool TryToServerTravelToCurrentSession() const;
+	bool ServerTravelAsHost_GameMap() const;
+	
+	/**
+	 * Try to server travel to the current map in the current session as a client
+	 * @return If we could server travel
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure=false, Category = "Network Manager")
+	bool ServerTravelAsClient_GameMap() const;
 
 	//Network Interface calls//
 
@@ -267,38 +296,38 @@ private:
 
 	/**
 	 * Called by IOnlineSessionInterface when create session completes
-	 * @param SessionName SessionName
+	 * @param SessionNameIn SessionName
 	 * @param Successful Operation succeeded
 	 */
-	void OnCreateSessionCompletionHandler(const FName SessionName, const bool Successful) const;
+	void OnCreateSessionCompletionHandler(const FName SessionNameIn, const bool Successful) const;
 
 	/**
 	 * Called by the IOnlineSessionInterface when create session completes
-	 * @param SessionName SessionName that was updated
+	 * @param SessionNameIn SessionName that was updated
 	 * @param Successful Operation succeeded
 	 */
-	void OnUpdateSessionCompletionHandler(const FName SessionName, const bool Successful) const;
+	void OnUpdateSessionCompletionHandler(const FName SessionNameIn, const bool Successful) const;
 
 	/**
 	 * Called by the IOnlineSessionInterface when a session update completes
-	 * @param SessionName SessionName that was updated
+	 * @param SessionNameIn SessionName that was updated
 	 * @param Successful Operation succeeded
 	 */
-	void OnStartSessionCompletionHandler(const FName SessionName, const bool Successful) const;
+	void OnStartSessionCompletionHandler(const FName SessionNameIn, const bool Successful) const;
 
 	/**
 	 * Called by the IOnlineSessionInterface when a session update completes
-	 * @param SessionName SessionName that was ended
+	 * @param SessionNameIn SessionName that was ended
 	 * @param Successful Operation succeeded
 	 */
-	void OnEndSessionCompletionHandler(const FName SessionName, const bool Successful) const;
+	void OnEndSessionCompletionHandler(const FName SessionNameIn, const bool Successful) const;
 
 	/**
 	 * Called by the IOnlineSessionInterface when a session is destroyed
-	 * @param SessionName SessionName that was destroyed
+	 * @param SessionNameIn SessionName that was destroyed
 	 * @param Successful Operation succeeded
 	 */
-	void OnDestroySessionCompletionHandler(const FName SessionName, const bool Successful) const;
+	void OnDestroySessionCompletionHandler(const FName SessionNameIn, const bool Successful) const;
 
 	/**
 	 * Called by the IOnlineSessionInterface when it's done searching for sessions
@@ -309,10 +338,10 @@ private:
 
 	/**
 	 * Called by the IOnlineSessionInterface when it's done trying to join a session
-	 * @param SessionName Session we are trying to join
-	 * @param Result State returned about whether could join the session
+	 * @param SessionNameIn Session we are trying to join
+	 * @param Result State returned about whether you could join the session
 	 */
-	void OnJoinSessionCompletionHandler(const FName SessionName, const EOnJoinSessionCompleteResult::Type Result) const;
+	void OnJoinSessionCompletionHandler(const FName SessionNameIn, const EOnJoinSessionCompleteResult::Type Result) const;
 
 	//Bindable functions, These get called by the IOnlineInterface//
 };
