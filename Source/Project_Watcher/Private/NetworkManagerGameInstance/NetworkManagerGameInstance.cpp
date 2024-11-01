@@ -129,7 +129,7 @@ void UNetworkManagerGameInstance::CreateSession(const int32 PlayerCount, const b
 	SessionSettings->bAllowInvites = true;
 	SessionSettings->bAllowJoinInProgress = true;
 	SessionSettings->bAllowJoinViaPresence = true;//TODO Test joining via presence / using typical steam joining techniques
-	SessionSettings->bAllowJoinViaPresenceFriendsOnly = true;
+	SessionSettings->bAllowJoinViaPresenceFriendsOnly = false;
 	SessionSettings->bIsDedicated = false;
 	SessionSettings->bUsesPresence = true;
 	SessionSettings->bIsLANMatch = false;
