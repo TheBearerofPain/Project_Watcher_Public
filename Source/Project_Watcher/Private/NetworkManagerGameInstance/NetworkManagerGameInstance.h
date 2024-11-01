@@ -127,7 +127,7 @@ private:
 	/* Main Menu Level Name */
 	const FString MainMenuMap = TEXT("/Game/Core/Maps/MainMenu_Map");
 	/* Main Game Level Name */
-	const FString MainGameMap = TEXT("/Game/Core/Maps/MainGame_Map");
+	const FString MainGameMap = TEXT("/Game/Core/Maps/MainGame_Map_WP");
 
 	/* Main Game Level path used for hosting */
 	FString BuildMainGameMapPathForHosting() const;
