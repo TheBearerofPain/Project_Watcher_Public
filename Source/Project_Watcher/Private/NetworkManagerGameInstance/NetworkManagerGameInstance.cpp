@@ -16,6 +16,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogNetworkManager, Log, All);
 DEFINE_LOG_CATEGORY(LogNetworkManager);
 
+
 USessionSearchResult* USessionSearchResult::Make(const FOnlineSessionSearchResult& OnlineSessionSearchResultIn)
 {
 	USessionSearchResult * SessionSearchResults = NewObject<USessionSearchResult>();
