@@ -228,6 +228,7 @@ void UNetworkManagerGameInstance::FindSessions(const int32 MaxSearchResults)
 	SessionSearch->MaxSearchResults = MaxSearchResults;
 	SessionSearch->bIsLanQuery = false;
 
+	/* SEARCH_PRESENCE IS BEING REPLACED, NEED TO LOOK INTO UPDATE API FOR STEAMWORKS */
 	SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
 
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
