@@ -2,6 +2,22 @@
 
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveLooseSubObjective/ObjectiveLooseSubObjectiveState.h"
 
+void UObjectiveLooseSubObjectiveState::SetPending()
+{
+	for (int32 i = 0; i < this->SubObjectiveList.Num(); i++)
+	{
+		this->SubObjectiveList[i].ObjectiveState = EObjectiveState::Pending;
+	}
+}
+
+void UObjectiveLooseSubObjectiveState::SetInProgress()
+{
+	for (int32 i = 0; i < this->SubObjectiveList.Num(); i++)
+	{
+		this->SubObjectiveList[i].ObjectiveState = EObjectiveState::InProgress;
+	}
+}
+
 TArray<FSubObjective> UObjectiveLooseSubObjectiveState::GetSubObjectiveState_Implementation()
 {
 	return this->SubObjectiveList;

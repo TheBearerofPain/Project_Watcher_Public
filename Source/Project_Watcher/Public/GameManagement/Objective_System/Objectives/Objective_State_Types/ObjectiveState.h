@@ -48,6 +48,10 @@ class PROJECT_WATCHER_API UObjectiveState : public UObject
 	GENERATED_BODY()
 
 public:
+
+	virtual void SetPending();
+
+	virtual void SetInProgress();
 	
 	virtual EObjectiveState Evaluate();
 };

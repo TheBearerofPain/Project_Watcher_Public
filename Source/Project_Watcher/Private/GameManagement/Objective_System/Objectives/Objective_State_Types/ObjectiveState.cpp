@@ -2,6 +2,10 @@
 
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveState.h"
 
+void UObjectiveState::SetPending(){}
+
+void UObjectiveState::SetInProgress(){}
+
 EObjectiveState UObjectiveState::Evaluate()
 {
 	return EObjectiveState::Pending;

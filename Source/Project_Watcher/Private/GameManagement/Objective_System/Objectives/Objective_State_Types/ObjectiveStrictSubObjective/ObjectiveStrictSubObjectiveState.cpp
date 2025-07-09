@@ -2,6 +2,22 @@
 
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveStrictSubObjective/ObjectiveStrictSubObjectiveState.h"
 
+void UObjectiveStrictSubObjectiveState::SetPending()
+{
+	for (int32 i = 0; i < this->SubObjectiveList.Num(); i++)
+	{
+		this->SubObjectiveList[i].ObjectiveState = EObjectiveState::Pending;
+	}
+}
+
+void UObjectiveStrictSubObjectiveState::SetInProgress()
+{
+	for (int32 i = 0; i < this->SubObjectiveList.Num(); i++)
+	{
+		this->SubObjectiveList[i].ObjectiveState = EObjectiveState::InProgress;
+	}
+}
+
 TArray<FSubObjective> UObjectiveStrictSubObjectiveState::GetSubObjectiveState_Implementation()
 {
 	return this->SubObjectiveList;

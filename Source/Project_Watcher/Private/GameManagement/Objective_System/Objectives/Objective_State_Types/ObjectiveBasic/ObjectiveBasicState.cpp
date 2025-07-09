@@ -3,6 +3,16 @@
 
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveBasic/ObjectiveBasicState.h"
 
+void UObjectiveBasicState::SetPending()
+{
+	this->ObjectiveState = EObjectiveState::Pending;
+}
+
+void UObjectiveBasicState::SetInProgress()
+{
+	this->ObjectiveState = EObjectiveState::InProgress;
+}
+
 EObjectiveState UObjectiveBasicState::GetObjectiveState_Implementation()
 {
 	return this->ObjectiveState;

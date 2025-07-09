@@ -21,6 +21,10 @@ private:
 	
 public:
 
+	virtual void SetPending() override;
+
+	virtual void SetInProgress() override;
+	
 	virtual EObjectiveState GetObjectiveState_Implementation() override;
 
 	virtual void SetObjectiveState_Implementation(const EObjectiveState ObjectiveStateIn) override;

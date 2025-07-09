@@ -114,6 +114,11 @@ void UObjectiveEventProcessor::UpdateObjectiveState(const int32 WID, UObjectiveS
 
 void UObjectiveEventProcessor::AddObjectiveRunning(UObjective* NewObjective)
 {
+	if (NewObjective)
+	{//Set it so that it's in progress now!
+		NewObjective->SetInProgress();
+	}
+	
 	if (RunningObjectives.IsEmpty())
 	{
 		RunningObjectives.Add(NewObjective);
@@ -139,6 +144,11 @@ void UObjectiveEventProcessor::AddObjectiveRunning(UObjective* NewObjective)
 
 void UObjectiveEventProcessor::AddObjectivePending(UObjective* NewObjective)
 {
+	if (NewObjective)
+	{
+		NewObjective->SetPending();
+	}
+	
 	if (PendingObjectives.IsEmpty())
 	{
 		PendingObjectives.Add(NewObjective);

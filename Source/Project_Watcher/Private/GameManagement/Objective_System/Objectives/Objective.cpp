@@ -40,6 +40,16 @@ void UObjective::SetFailureObjective(UObjective* FailureObjectiveIn)
 	this->FailureObjective = FailureObjectiveIn;
 }
 
+void UObjective::SetPending() const
+{
+	this->ObjectiveState->SetPending();
+}
+
+void UObjective::SetInProgress() const
+{
+	this->ObjectiveState->SetInProgress();
+}
+
 EObjectiveState UObjective::Evaluate() const
 {
 	EObjectiveState CurrentState = EObjectiveState::Pending;

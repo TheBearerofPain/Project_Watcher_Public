@@ -20,6 +20,10 @@ private:
 	TArray<FSubObjective> SubObjectiveList;
 	int32 CompletionThreshold = 1;
 public:
+
+	virtual void SetPending() override;
+
+	virtual void SetInProgress() override;
 	
 	virtual TArray<FSubObjective> GetSubObjectiveState_Implementation() override;
 

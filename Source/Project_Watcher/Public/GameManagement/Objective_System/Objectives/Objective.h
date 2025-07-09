@@ -64,6 +64,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Objective")
 	void SetFailureObjective(UObjective * FailureObjectiveIn);
 
+	void SetPending() const;
+
+	void SetInProgress() const;
+	
 	EObjectiveState Evaluate() const;
 };
 
