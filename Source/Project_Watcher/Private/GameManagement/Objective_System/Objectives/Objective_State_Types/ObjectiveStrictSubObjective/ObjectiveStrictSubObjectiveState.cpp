@@ -1,13 +1,13 @@
 // Project Watcher 2024 & Beyond.
 
-#include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveStrictSubObjectiveState.h"
+#include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveStrictSubObjective/ObjectiveStrictSubObjectiveState.h"
 
-TArray<FSubObjective> UObjectiveStrictSubObjectiveState::GetSubObjectiveList()
+TArray<FSubObjective> UObjectiveStrictSubObjectiveState::GetSubObjectiveState_Implementation()
 {
 	return this->SubObjectiveList;
 }
 
-void UObjectiveStrictSubObjectiveState::SetStrictSubObjectiveList(const TArray<FSubObjective>& SubObjectiveListIn)
+void UObjectiveStrictSubObjectiveState::SetSubObjectiveState_Implementation(const TArray<FSubObjective>& SubObjectiveListIn)
 {
 	this->SubObjectiveList = SubObjectiveListIn;
 }

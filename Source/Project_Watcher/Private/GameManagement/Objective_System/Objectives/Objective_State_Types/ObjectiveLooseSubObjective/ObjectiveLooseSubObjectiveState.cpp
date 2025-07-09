@@ -1,13 +1,13 @@
 // Project Watcher 2024 & Beyond.
 
-#include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveLooseSubObjectiveState.h"
+#include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveLooseSubObjective/ObjectiveLooseSubObjectiveState.h"
 
-TArray<FSubObjective> UObjectiveLooseSubObjectiveState::GetSubObjectiveList()
+TArray<FSubObjective> UObjectiveLooseSubObjectiveState::GetSubObjectiveState_Implementation()
 {
 	return this->SubObjectiveList;
 }
 
-void UObjectiveLooseSubObjectiveState::SetLooseSubObjectiveList(const TArray<FSubObjective>& SubObjectiveListIn, const int32 CompletionThresholdIn)
+void UObjectiveLooseSubObjectiveState::SetSubObjectiveState_Implementation(const TArray<FSubObjective>& SubObjectiveListIn, const int32 CompletionThresholdIn)
 {
 	this->SubObjectiveList = SubObjectiveListIn;
 	this->CompletionThreshold = CompletionThresholdIn;
