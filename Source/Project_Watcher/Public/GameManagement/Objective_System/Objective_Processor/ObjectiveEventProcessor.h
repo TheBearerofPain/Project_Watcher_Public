@@ -4,75 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "GameManagement/Objective_System/Objectives/Objective.h"
 #include "ObjectiveEventProcessor.generated.h"
-
-USTRUCT(Blueprintable)
-struct PROJECT_WATCHER_API FSubObjective
-{
-	GENERATED_USTRUCT_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SubObjective")
-	FString Title = TEXT("");
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SubObjective")
-	FString Description = TEXT("");
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SubObjective")
-	bool Completed = false;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SubObjective")
-	AActor * SubObjectiveMarker = nullptr;
-};
-
-UCLASS(Blueprintable)
-class PROJECT_WATCHER_API UObjective : public UObject
-{
-	GENERATED_BODY()
-	
-public:
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
-	int32 WID = -1;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
-	FString Title = TEXT("");
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
-	FString Description = TEXT("");
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
-	int64 StartTime = -1;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
-	int64 EndTime = -1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
-	bool Completed = false;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SubObjective")
-	TArray<FSubObjective> SubObjectives;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
-	AActor * ObjectiveMarker = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
-	UObjective * SuccessObjective = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
-	UObjective * FailureObjective = nullptr;
-	
-public:
-	
-	void SetObjectiveData(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn, const int64 StartTimeIn, const int64 EndTimeIn);
-	
-	void SetSubObjectiveData(const TArray<FSubObjective>& SubObjectivesIn);
-	
-	void SetObjectiveMarkerData(AActor * ObjectiveMarkerIn);
-
-	void SetSuccessObjectiveData(UObjective * SuccessObjectiveIn);
-	
-	void SetFailureObjectiveData(UObjective * FailureObjectiveIn);
-};
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FObjectiveDelegate, UObjective *, Objective);
 
@@ -94,6 +27,10 @@ private:
 	UPROPERTY()
 	TArray<UObjective*> PendingObjectives;
 
+	//No Timer Objective List
+	UPROPERTY()
+	TArray<UObjective*> NoTimerObjectives;
+
 	//Objective Timer Handle for when the next soonest objective expires
 	FTimerHandle RunningObjectiveTimerHandle;
 
@@ -104,9 +41,13 @@ private:
 
 public:
 
-	//Objective Delegate fires when an objective's completed state has been evaluated as true
+	//Objective Delegate fires when an objective's completed state has been evaluated as completed
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveCompleteDelegate;
+
+	//Objective Delegate fires when an objective's completed state has been evaluated as failed
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
+	FObjectiveDelegate ObjectiveFailedDelegate;
 	
 	//Objective Delegate fires when an objective's timer has expired
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
@@ -115,6 +56,8 @@ public:
 	//Objective Delegate fires when an objective's timer has started
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveStartedDelegate;
+
+	//Add one for when it fails!
 
 	/**
 	 * Adds a new objective to the processor
@@ -130,22 +73,11 @@ public:
 	void RemoveObjective(const int32 WID);
 
 	/**
-	 * Looks through Running Objectives & updates it's completion state
-	 * IF it becomes true, the ObjectiveCompleteDelegate will be fired & it will be removed
-	 * from the RunningObjectives ProcessorList
-	 * @param WID The WID of the objective we are updating
-	 * @param Completed The Updated Completion state
+	 * Updates the Objective with the matching WID, with the given state, We ONLY search running objectives to update
+	 * @param WID The World ID we are looking for
+	 * @param ObjectiveStateIn The State we are updating with
 	 */
-	void UpdateObjectiveCompletionState(const int32 WID, const bool Completed);
-
-	/**
-	 * Looks through Running Objectives & updates it's completion state
-	 * IF it becomes true, the ObjectiveCompleteDelegate will be fired & it will be removed
-	 * from the RunningObjectives ProcessorList
-	 * @param WID The WID of the objective we are updating
-	 * @param SubObjectives The Updated completion state of the subobjectives
-	 */
-	void UpdateObjectiveCompletionState(const int32 WID, const TArray<FSubObjective>& SubObjectives);
+	void UpdateObjectiveState(const int32 WID, UObjectiveState * ObjectiveStateIn);
 
 private:
 	
@@ -160,6 +92,12 @@ private:
 	 * @param NewObjective The Objective we are adding
 	 */
 	void AddObjectivePending(UObjective * NewObjective);
+
+	/**
+	 * Adds an Objective to the NoTimerObjective List
+	 * @param NewObjective The Objective we are adding
+	 */
+	void AddObjectiveNoTimer(UObjective * NewObjective);
 	
 	/**
 	 * Sets the timer until the next objective IF any
@@ -197,6 +135,12 @@ private:
 	void CallObjectiveCompleteDelegate(UObjective * Objective) const;
 
 	/**
+	 * Used to CallObjectiveFailedDelegate
+	 * @param Objective The Objective we are broadcasting as failed
+	 */
+	void CallObjectiveFailedDelegate(UObjective * Objective) const;
+
+	/**
 	 * Used to CallObjectiveTimerExpiredDelegate
 	 * @param Objective The Objective we are broadcasting as expired
 	 */
@@ -213,5 +157,5 @@ private:
 	 * @param Objective The objective we are evaluating
 	 * @return True if the objective is complete, False if the objective is NOT complete
 	 */
-	static bool EvaluateObjective(UObjective * Objective);
+	static EObjectiveState EvaluateObjective(const UObjective * Objective);
 };

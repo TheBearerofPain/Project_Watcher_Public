@@ -1,43 +1,20 @@
 // Project Watcher 2024 & Beyond.
 
-#include "Project_Watcher/Public/GameManagement/ObjectiveEventProcessor.h"
-
-void UObjective::SetObjectiveData(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn,
-	const int64 StartTimeIn, const int64 EndTimeIn)
-{
-	this->WID = WIDIn;
-	this->Title = TitleIn;
-	this->Description = DescriptionIn;
-	this->StartTime = StartTimeIn;
-	this->EndTime = EndTimeIn;
-}
-
-void UObjective::SetSubObjectiveData(const TArray<FSubObjective>& SubObjectivesIn)
-{
-	this->SubObjectives = SubObjectivesIn;
-}
-
-void UObjective::SetObjectiveMarkerData(AActor* ObjectiveMarkerIn)
-{
-	this->ObjectiveMarker = ObjectiveMarkerIn;
-}
-
-void UObjective::SetSuccessObjectiveData(UObjective * SuccessObjectiveIn)
-{
-	this->SuccessObjective = SuccessObjectiveIn;
-}
-
-void UObjective::SetFailureObjectiveData(UObjective* FailureObjectiveIn)
-{
-	this->FailureObjective = FailureObjectiveIn;
-}
+#include "Project_Watcher/Public/GameManagement/Objective_System/Objective_Processor/ObjectiveEventProcessor.h"
 
 void UObjectiveEventProcessor::AddObjective(UObjective * NewObjective)
 {
 	//Is this Objective Pending or Already Started?
 	if (FDateTime::UtcNow().ToUnixTimestamp() > NewObjective->StartTime)
 	{//The Objective Is Running
-		this->AddObjectiveRunning(NewObjective);
+		if (NewObjective->NoTimer)
+		{
+			this->AddObjectiveNoTimer(NewObjective);
+		}
+		else
+		{
+			this->AddObjectiveRunning(NewObjective);
+		}
 	}
 	else
 	{//The Objective Is Pending
@@ -73,58 +50,64 @@ void UObjectiveEventProcessor::RemoveObjective(const int32 WID)
 			return;
 		}
 	}
-}
 
-void UObjectiveEventProcessor::UpdateObjectiveCompletionState(const int32 WID, const bool Completed)
-{
-	for (int i = 0; i < RunningObjectives.Num(); i++)
+	for (int32 i = 0; i < NoTimerObjectives.Num(); i++)
 	{
-		if (RunningObjectives[i]->WID == WID)
+		if (NoTimerObjectives[i]->WID == WID)
 		{
-			UObjective * CachedObjective = RunningObjectives[i];
-			CachedObjective->Completed = Completed;
-
-			if (EvaluateObjective(CachedObjective))
-			{//Objective is done remove it and let the system know it's done
-				this->CallObjectiveCompleteDelegate(CachedObjective);
-				RunningObjectives.RemoveAt(i);
-				
-				if (CachedObjective->SuccessObjective)
-				{//If the success objective exists add it
-					this->AddObjective(CachedObjective->SuccessObjective);
-				}
-
-				this->UpdateRunningTimerUntilNextObjective();
-			}
-			
-			break;
+			NoTimerObjectives.RemoveAt(i);
+			return;
 		}
 	}
 }
 
-void UObjectiveEventProcessor::UpdateObjectiveCompletionState(const int32 WID, const TArray<FSubObjective>& SubObjectives)
+void UObjectiveEventProcessor::UpdateObjectiveState(const int32 WID, UObjectiveState * ObjectiveStateIn)
 {
-	for (int i = 0; i < RunningObjectives.Num(); i++)
+	if (ObjectiveStateIn)
 	{
-		if (RunningObjectives[i]->WID == WID && RunningObjectives[i]->SubObjectives.Num() > 0)
+		for (int32 i = 0; i < RunningObjectives.Num(); i++)
 		{
-			UObjective * CachedObjective = RunningObjectives[i];
-			CachedObjective->SubObjectives = SubObjectives;
+			if (RunningObjectives[i]->WID == WID)
+			{
+				UObjective * Objective = RunningObjectives[i];
+				Objective->ObjectiveState = ObjectiveStateIn;
 
-			if (EvaluateObjective(CachedObjective))
-			{//Objective is done remove it and let the system know it's done
-				this->CallObjectiveCompleteDelegate(CachedObjective);
-				RunningObjectives.RemoveAt(i);
+				switch (this->EvaluateObjective(Objective))
+				{
+					case EObjectiveState::InProgress:
+						break;
+					case EObjectiveState::Failed:
+						
+						this->CallObjectiveFailedDelegate(Objective);
+						RunningObjectives.RemoveAt(i);
 
-				if (CachedObjective->SuccessObjective)
-				{//If the success objective exists add it
-					this->AddObjective(CachedObjective->SuccessObjective);
+						if (Objective->FailureObjective)
+						{
+							this->AddObjective(Objective->FailureObjective);
+						}
+
+						this->UpdateRunningTimerUntilNextObjective();
+						
+						break;
+					case EObjectiveState::Completed:
+
+						this->CallObjectiveCompleteDelegate(Objective);
+						RunningObjectives.RemoveAt(i);
+						
+						if (Objective->SuccessObjective)
+						{//If the success objective exists add it
+							this->AddObjective(Objective->SuccessObjective);
+						}
+					
+						this->UpdateRunningTimerUntilNextObjective();
+					
+						break;
+					default:
+						break;
 				}
 				
-				this->UpdateRunningTimerUntilNextObjective();
+				break;
 			}
-			
-			break;
 		}
 	}
 }
@@ -179,6 +162,11 @@ void UObjectiveEventProcessor::AddObjectivePending(UObjective* NewObjective)
 	}//if
 }
 
+void UObjectiveEventProcessor::AddObjectiveNoTimer(UObjective * NewObjective)
+{
+	NoTimerObjectives.Add(NewObjective);
+}
+
 void UObjectiveEventProcessor::UpdateRunningTimerUntilNextObjective()
 {
 	if (!RunningObjectives.IsEmpty())
@@ -231,7 +219,16 @@ void UObjectiveEventProcessor::ObjectivePendingTimerComplete()
 	if (!this->PendingObjectives.IsEmpty())
 	{
 		UObjective * Objective = this->PendingObjectives[0];
-		this->AddObjectiveRunning(Objective);
+
+		if (Objective->NoTimer)
+		{
+			this->AddObjectiveNoTimer(Objective);
+		}
+		else
+		{
+			this->AddObjectiveRunning(Objective);
+		}
+		
 		this->PendingObjectives.RemoveAt(0);
 		this->CallObjectiveTimerStartedDelegate(Objective);
 
@@ -247,6 +244,14 @@ void UObjectiveEventProcessor::CallObjectiveCompleteDelegate(UObjective * Object
 	if (ObjectiveCompleteDelegate.IsBound())
 	{
 		ObjectiveCompleteDelegate.Broadcast(Objective);
+	}
+}
+
+void UObjectiveEventProcessor::CallObjectiveFailedDelegate(UObjective * Objective) const
+{
+	if (ObjectiveFailedDelegate.IsBound())
+	{
+		ObjectiveFailedDelegate.Broadcast(Objective);
 	}
 }
 
@@ -266,21 +271,14 @@ void UObjectiveEventProcessor::CallObjectiveTimerStartedDelegate(UObjective * Ob
 	}
 }
 
-bool UObjectiveEventProcessor::EvaluateObjective(UObjective * Objective)
+EObjectiveState UObjectiveEventProcessor::EvaluateObjective(const UObjective * Objective)
 {
-	bool Completed = true;
-
-	if (Objective->SubObjectives.Num() > 0)
+	EObjectiveState ObjectiveState = EObjectiveState::Pending;
+	
+	if (Objective)
 	{
-		for (const FSubObjective SubObjective : Objective->SubObjectives)
-		{
-			Completed &= SubObjective.Completed;
-		}
-	}
-	else
-	{
-		Completed = Objective->Completed;
+		ObjectiveState = Objective->Evaluate();
 	}
 	
-	return Completed;
+	return ObjectiveState;
 }
