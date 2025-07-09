@@ -12,7 +12,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FObjectiveDelegate, UObjective *, Ob
 /**
  * Used to deal with the various objectives & keep track of their states
  */
-UCLASS()
+UCLASS(Blueprintable)
 class PROJECT_WATCHER_API UObjectiveEventProcessor : public UObject
 {
 	GENERATED_BODY()

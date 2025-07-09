@@ -24,9 +24,9 @@ class PROJECT_WATCHER_API IObjectiveStrictSubObjective
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 
-	UFUNCTION(BlueprintNativeEvent)
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	TArray<FSubObjective> GetSubObjectiveState();
 
-	UFUNCTION(BlueprintNativeEvent)
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void SetSubObjectiveState(const TArray<FSubObjective>& SubObjectiveStateIn);
 };
