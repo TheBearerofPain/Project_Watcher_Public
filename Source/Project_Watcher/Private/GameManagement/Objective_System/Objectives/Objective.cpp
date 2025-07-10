@@ -3,26 +3,16 @@
 
 #include "GameManagement/Objective_System/Objectives/Objective.h"
 
-void UObjective::SetObjectiveData(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn,
-								 UObjectiveState * ObjectiveDataIn, const int64 StartTimeIn, const int64 EndTimeIn)
+void UObjective::Setup(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn,
+	UObjectiveState* ObjectiveStateIn, const FObjectiveTime& ObjectiveTime, const bool NoTimerIn)
 {
 	this->WID = WIDIn;
 	this->Title = TitleIn;
 	this->Description = DescriptionIn;
-	this->ObjectiveState = ObjectiveDataIn;
-	this->StartTime = StartTimeIn;
-	this->EndTime = EndTimeIn;
-}
-
-void UObjective::SetObjectiveDataNoTimer(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn,
-	UObjectiveState * ObjectiveDataIn, const int64 StartTimeIn)
-{
-	this->WID = WIDIn;
-	this->Title = TitleIn;
-	this->Description = DescriptionIn;
-	this->ObjectiveState = ObjectiveDataIn;
-	this->StartTime = StartTimeIn;
-	this->NoTimer = true;
+	this->ObjectiveState = ObjectiveStateIn;
+	this->StartTime = ObjectiveTime.StartTime;
+	this->EndTime = ObjectiveTime.EndTime;
+	this->NoTimer = NoTimerIn;
 }
 
 void UObjective::SetObjectiveMarker(AActor* ObjectiveMarkerIn)
@@ -37,6 +27,12 @@ void UObjective::SetSuccessObjective(UObjective * SuccessObjectiveIn)
 
 void UObjective::SetFailureObjective(UObjective* FailureObjectiveIn)
 {
+	this->FailureObjective = FailureObjectiveIn;
+}
+
+void UObjective::SetSuccessAndFailureObjectives(UObjective* SuccessObjectiveIn, UObjective* FailureObjectiveIn)
+{
+	this->SuccessObjective = SuccessObjectiveIn;
 	this->FailureObjective = FailureObjectiveIn;
 }
 

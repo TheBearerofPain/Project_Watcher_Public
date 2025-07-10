@@ -32,7 +32,7 @@ struct PROJECT_WATCHER_API FSubObjective
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SubObjective")
 	FString Description = TEXT("");
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SubObjective")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SubObjective")
 	TEnumAsByte<EObjectiveState> ObjectiveState = EObjectiveState::Pending;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SubObjective")

@@ -57,12 +57,11 @@ public:
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveStartedDelegate;
 
-	//Add one for when it fails!
-
 	/**
 	 * Adds a new objective to the processor
 	 * @param NewObjective The Objective we are adding
 	 */
+	UFUNCTION(BlueprintCallable, Category = "Objective")
 	void AddObjective(UObjective * NewObjective);
 
 	/**
@@ -70,6 +69,7 @@ public:
 	 * DOES NOT fire any associated events if it happens to be complete or expired
 	 * @param WID The event World ID we are removing
 	 */
+	UFUNCTION(BlueprintCallable, Category = "Objective")
 	void RemoveObjective(const int32 WID);
 
 	/**
@@ -77,6 +77,7 @@ public:
 	 * @param WID The World ID we are looking for
 	 * @param ObjectiveStateIn The State we are updating with
 	 */
+	UFUNCTION(BlueprintCallable, Category = "Objective")
 	void UpdateObjectiveState(const int32 WID, UObjectiveState * ObjectiveStateIn);
 
 private:

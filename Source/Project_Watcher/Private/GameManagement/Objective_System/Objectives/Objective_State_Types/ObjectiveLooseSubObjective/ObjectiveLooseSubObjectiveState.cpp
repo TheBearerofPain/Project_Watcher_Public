@@ -26,7 +26,7 @@ TArray<FSubObjective> UObjectiveLooseSubObjectiveState::GetSubObjectiveState_Imp
 void UObjectiveLooseSubObjectiveState::SetSubObjectiveState_Implementation(const TArray<FSubObjective>& SubObjectiveListIn, const int32 CompletionThresholdIn)
 {
 	this->SubObjectiveList = SubObjectiveListIn;
-	this->CompletionThreshold = CompletionThresholdIn;
+	this->CompletionThreshold = FMath::Max(1, FMath::Min(this->SubObjectiveList.Num(),CompletionThresholdIn));
 }
 
 EObjectiveState UObjectiveLooseSubObjectiveState::Evaluate()

@@ -7,6 +7,19 @@
 #include "Objective_State_Types/ObjectiveState.h"
 #include "Objective.generated.h"
 
+USTRUCT(BlueprintType)
+struct PROJECT_WATCHER_API FObjectiveTime
+{
+	GENERATED_BODY()
+public:
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int64 StartTime = -1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int64 EndTime = -1;
+};
+
 /**
  * Objective
  */
@@ -50,11 +63,8 @@ public:
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "Objective")
-	void SetObjectiveData(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveDataIn, const int64 StartTimeIn, const int64 EndTimeIn);
-
-	UFUNCTION(BlueprintCallable, Category = "Objective")
-	void SetObjectiveDataNoTimer(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveDataIn, const int64 StartTimeIn);
-
+	void Setup(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTime, const bool NoTimerIn);
+	
 	UFUNCTION(BlueprintCallable, Category = "Objective")
 	void SetObjectiveMarker(AActor * ObjectiveMarkerIn);
 
@@ -63,6 +73,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Objective")
 	void SetFailureObjective(UObjective * FailureObjectiveIn);
+
+	UFUNCTION(BlueprintCallable, Category = "Objective")
+	void SetSuccessAndFailureObjectives(UObjective * SuccessObjectiveIn, UObjective * FailureObjectiveIn);
 
 	void SetPending() const;
 

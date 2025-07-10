@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "ObjectiveLooseSubObjective.h"
-#include "UObject/Object.h"
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveState.h"
 #include "ObjectiveLooseSubObjectiveState.generated.h"
 
@@ -26,7 +25,7 @@ public:
 	virtual void SetInProgress() override;
 	
 	virtual TArray<FSubObjective> GetSubObjectiveState_Implementation() override;
-
+	
 	virtual void SetSubObjectiveState_Implementation(const TArray<FSubObjective>& SubObjectiveStateIn, const int32 CompletionThresholdIn) override;
 
 	virtual EObjectiveState Evaluate() override;
