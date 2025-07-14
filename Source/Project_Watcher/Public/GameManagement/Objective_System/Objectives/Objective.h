@@ -18,6 +18,42 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int64 EndTime = -1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool NoTimer = false;
+
+	/**
+	 * Default Constructor
+	 */
+	FObjectiveTime()
+	{
+		StartTime = -1;
+		EndTime = -1;
+		NoTimer = false;
+	}
+
+	/**
+	 * NoTimer Constructor
+	 * @param StartTimeIn StartTime
+	 */
+	FObjectiveTime(const int64 StartTimeIn)
+	{
+		StartTime = StartTimeIn;
+		EndTime = -1;
+		NoTimer = true;
+	}
+
+	/**
+	 * Normal Constructor
+	 * @param StartTimeIn StartTime 
+	 * @param EndTimeIn EndTime
+	 */
+	FObjectiveTime(const int64 StartTimeIn, const int64 EndTimeIn)
+	{
+		StartTime = StartTimeIn;
+		EndTime = EndTimeIn;
+		NoTimer = false;
+	}
 };
 
 /**
@@ -40,13 +76,7 @@ public:
 	FString Description = TEXT("");
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
-	int64 StartTime = -1;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
-	int64 EndTime = -1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
-	bool NoTimer = false;//Use this flag if you don't want this objective to time out
+	FObjectiveTime ObjectiveTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
 	UObjectiveState * ObjectiveState = nullptr;
@@ -63,7 +93,7 @@ public:
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "Objective")
-	void Setup(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTime, const bool NoTimerIn);
+	void Setup(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn);
 	
 	UFUNCTION(BlueprintCallable, Category = "Objective")
 	void SetObjectiveMarker(AActor * ObjectiveMarkerIn);

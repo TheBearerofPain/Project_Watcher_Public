@@ -23,11 +23,10 @@ public:
 	 * @param Title Title of the Objective
 	 * @param Description Description of the Objective
 	 * @param ObjectiveTime The Time when the objective will start and end (endTime gets ignored if NoTimer is true)
-	 * @param NoTimer If false, the objective expires when the endTime is reached, If true the objective will not expire
 	 * @return Initialized Basic Objective
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective System")
-	static UObjective * CreateBasicObjective(const int32 WID, const FString& Title, const FString& Description, const FObjectiveTime& ObjectiveTime, const bool NoTimer);
+	static UObjective * CreateBasicObjective(const int32 WID, const FString& Title, const FString& Description, const FObjectiveTime& ObjectiveTime);
 
 	/**
 	 * Sets the SuccessObjective in the Given Objective
@@ -74,11 +73,10 @@ public:
 	 * @param SubObjectives The Objective List for this objective
 	 * @param CompletionThreshold How many sub objectives need to be complete in order for this objective to be considered complete
 	 * @param ObjectiveTime The Time when the objective will start and end (endTime gets ignored if NoTimer is true)
-	 * @param NoTimer If false, the objective expires when the endTime is reached, If true the objective will not expire
 	 * @return Initialized LooseSubObjective Type
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective System")
-	static UObjective * CreateLooseSubObjective(const int32 WID, const FString& Title, const FString& Description, const TArray<FSubObjective>& SubObjectives, const int32 CompletionThreshold, const FObjectiveTime& ObjectiveTime, const bool NoTimer);
+	static UObjective * CreateLooseSubObjective(const int32 WID, const FString& Title, const FString& Description, const TArray<FSubObjective>& SubObjectives, const int32 CompletionThreshold, const FObjectiveTime& ObjectiveTime);
 
 	/**
 	 * Creates a StrictSubObjective Objective Type , ALL SubObjectives need to be complete in order for this objective to be complete
@@ -87,11 +85,10 @@ public:
 	 * @param Description Description of the Objective
 	 * @param SubObjectives The Objective List for this objective
 	 * @param ObjectiveTime The Time when the objective will start and end (endTime gets ignored if NoTimer is true)
-	 * @param NoTimer If false, the objective expires when the endTime is reached, If true the objective will not expire
 	 * @return Initialized StrictSubObjective Type
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective System")
-	static UObjective * CreateStrictSubObjective(const int32 WID, const FString& Title, const FString& Description, const TArray<FSubObjective>& SubObjectives, const FObjectiveTime& ObjectiveTime, const bool NoTimer);
+	static UObjective * CreateStrictSubObjective(const int32 WID, const FString& Title, const FString& Description, const TArray<FSubObjective>& SubObjectives, const FObjectiveTime& ObjectiveTime);
 
 	/**
 	 * Creates a TArray<FSubObjective> From a given item

@@ -4,15 +4,13 @@
 #include "GameManagement/Objective_System/Objectives/Objective.h"
 
 void UObjective::Setup(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn,
-	UObjectiveState* ObjectiveStateIn, const FObjectiveTime& ObjectiveTime, const bool NoTimerIn)
+	UObjectiveState* ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn)
 {
 	this->WID = WIDIn;
 	this->Title = TitleIn;
 	this->Description = DescriptionIn;
 	this->ObjectiveState = ObjectiveStateIn;
-	this->StartTime = ObjectiveTime.StartTime;
-	this->EndTime = ObjectiveTime.EndTime;
-	this->NoTimer = NoTimerIn;
+	this->ObjectiveTime = ObjectiveTimeIn;
 }
 
 void UObjective::SetObjectiveMarker(AActor* ObjectiveMarkerIn)

@@ -6,11 +6,11 @@
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveStrictSubObjective/ObjectiveStrictSubObjectiveState.h"
 
 UObjective* UObjectiveSupport::CreateBasicObjective(const int32 WID, const FString& Title,
-                                                    const FString& Description, const FObjectiveTime& ObjectiveTime, const bool NoTimer)
+                                                    const FString& Description, const FObjectiveTime& ObjectiveTime)
 {
 	UObjectiveState * BasicState = NewObject<UObjectiveBasicState>();
 	UObjective * Objective = NewObject<UObjective>();
-	Objective->Setup(WID, Title, Description, BasicState, ObjectiveTime, NoTimer);
+	Objective->Setup(WID, Title, Description, BasicState, ObjectiveTime);
 	return Objective;
 }
 
@@ -41,27 +41,25 @@ UObjective* UObjectiveSupport::AddSuccessAndFailureObjectives(UObjective* Object
 }
 
 UObjective* UObjectiveSupport::CreateLooseSubObjective(const int32 WID, const FString& Title,
-                                                       const FString& Description, const TArray<FSubObjective>& SubObjectives, const int32 CompletionThreshold, const FObjectiveTime& ObjectiveTime,
-                                                       const bool NoTimer)
+                                                       const FString& Description, const TArray<FSubObjective>& SubObjectives, const int32 CompletionThreshold, const FObjectiveTime& ObjectiveTime)
 {
 	UObjectiveLooseSubObjectiveState * LooseSubObjectiveState = NewObject<UObjectiveLooseSubObjectiveState>();
 	LooseSubObjectiveState->SetSubObjectiveState_Implementation(SubObjectives, CompletionThreshold);
 	
 	UObjective * Objective = NewObject<UObjective>();
-	Objective->Setup(WID, Title, Description, LooseSubObjectiveState, ObjectiveTime, NoTimer);
+	Objective->Setup(WID, Title, Description, LooseSubObjectiveState, ObjectiveTime);
 	
 	return Objective;
 }
 
 UObjective* UObjectiveSupport::CreateStrictSubObjective(const int32 WID, const FString& Title,
-	const FString& Description, const TArray<FSubObjective>& SubObjectives, const FObjectiveTime& ObjectiveTime,
-	const bool NoTimer)
+	const FString& Description, const TArray<FSubObjective>& SubObjectives, const FObjectiveTime& ObjectiveTime)
 {
 	UObjectiveStrictSubObjectiveState * StrictSubObjectiveState = NewObject<UObjectiveStrictSubObjectiveState>();
 	StrictSubObjectiveState->SetSubObjectiveState_Implementation(SubObjectives);
 
 	UObjective * Objective = NewObject<UObjective>();
-	Objective->Setup(WID, Title, Description, StrictSubObjectiveState, ObjectiveTime, NoTimer);
+	Objective->Setup(WID, Title, Description, StrictSubObjectiveState, ObjectiveTime);
 	
 	return Objective;
 }
