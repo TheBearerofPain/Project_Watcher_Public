@@ -9,7 +9,23 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FObjectiveDelegate, UObjective *, Objective);
 
+USTRUCT()
+struct PROJECT_WATCHER_API FDataManagerSaveState
+{
+	GENERATED_BODY()
+
+	UPROPERTY(SaveGame)
+	int32 WorldID = -1;
+	
+	UPROPERTY(SaveGame)
+	int64 CurrentGameTime = -1;
+	
+	UPROPERTY(SaveGame)
+	TMap<int32, FObjectiveSave> Objectives;
+};
+
 //@TODO figure out how to do seasons in a nice configurable way
+//@TODO take another look at marking Added with Add Remove & Update! this is very important & Potentially sensitive code
 
 UENUM(BlueprintType)
 enum ETimeAnchor
@@ -295,18 +311,93 @@ public:
 	
 	//Game Time State//
 
-	//World ID State//
-
 	/**
 	 * Generates a new Unique World ID
 	 * @return The new World ID
 	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "World ID")
 	int32 GetWorldID();
 	
 	//World ID State//
 
+	//Save State//
+
+	UFUNCTION(BlueprintCallable, Category = "SaveTesting")
+	void TestSave();
+
+	UFUNCTION(BlueprintCallable, Category = "SaveTesting")
+	void TestLoad();
+
+	//Save State//
+
+	// Logging //
+
+	/**
+	 * Logs the Objective Graph with verbose detail
+	 */
+	void LogVerboseObjectiveGraph();
+
+	/**
+	 * Logs the Objective Graph with sparse detail
+	 */
+	void LogSparseObjectiveGraph();
+
+	/**
+	 * Logs the Objectives in the Objective Lists in Verbose Detail
+	 */
+	void LogVerboseObjectiveLists();
+
+	/**
+	 * Logs the Objectives in the Objective Lists in Sparse Detail
+	 */
+	void LogSparseObjectiveLists();
+	
+	// Logging //
+
 private:
 
+	// Graph Serializer //
+
+	/* This map is used to serialize the graph in order to deal with cycles in the graph properly */
+	UPROPERTY()
+	TMap<int32, UObjective*> SerializedObjectiveMap;
+
+	/**
+	 * Serializes the entire Objective Graph
+	 * @return TMap of the Objective Graph
+	 */
+	TMap<int32, UObjective*> SerializeObjectiveGraph();
+
+	/**
+	 * Serializes the given Objective & its sub graph into SerializedObjectiveMap
+	 * @param Objective The Objective we are serializing
+	 */
+	void SerializeObjectiveSubGraph(UObjective * Objective);
+
+	/**
+	 * Serializes the entire Objective Graph & Converts it into a savable form
+	 * @return FObjectiveSave TMap
+	 */
+	TMap<int32, FObjectiveSave> SerializeObjectiveSaveGraph();
+
+	// Graph Serializer //
+	
+	// Save State //
+
+	/**
+	 * Gets the SaveState of the DataManager
+	 * @return The FDataManagerSaveState
+	 */
+	FDataManagerSaveState GetSaveState();
+
+	/**
+	 * Restores the DataManager with a given SaveState
+	 * @param SaveState The FDataManagerSaveState
+	 */
+	void RestoreSaveState(const FDataManagerSaveState& SaveState);
+	
+	// Save State //
+	
 	//Objective State//
 	
 	/**
@@ -415,14 +506,5 @@ private:
 	void UpdateCurrentGameTime();
 	
 	//Game Time State//
-
-	// Saving, Restoring & Checking //
-
-	void SaveGameState();
-
-	void LoadGameState();
-
-	bool CheckGameState();
 	
-	// Saving, Restoring & Checking //
 };

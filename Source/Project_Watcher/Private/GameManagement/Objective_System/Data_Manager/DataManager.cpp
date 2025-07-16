@@ -1,9 +1,13 @@
 // Project Watcher 2024 & Beyond.
 
 #include "Project_Watcher/Public/GameManagement/Objective_System/Data_Manager/DataManager.h"
+#include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveLooseSubObjective/ObjectiveLooseSubObjectiveState.h"
+#include "GameManagement/Objective_System/Support/DataManagerSave.h"
+#include "Kismet/GameplayStatics.h"
 
 void UDataManager::AddObjective(UObjective * NewObjective)
 {
+	NewObjective->Added = true;
 	//Is this Objective Pending or Already Started?
 	if (FDateTime::UtcNow().ToUnixTimestamp() > NewObjective->ObjectiveTime.StartTime)
 	{//The Objective Is Running
@@ -26,8 +30,10 @@ void UDataManager::RemoveObjective(const int32 WID)
 {
 	for (int32 i = 0; i < RunningObjectives.Num(); i++)
 	{
-		if (RunningObjectives[i]->WID == WID)
+		UObjective * CachedObjective = RunningObjectives[i];
+		if (CachedObjective->WID == WID)
 		{
+			CachedObjective->Added = false;
 			RunningObjectives.RemoveAt(i);
 			
 			if (i == 0)
@@ -40,8 +46,10 @@ void UDataManager::RemoveObjective(const int32 WID)
 
 	for (int32 i = 0; i < PendingObjectives.Num(); i++)
 	{
-		if (PendingObjectives[i]->WID == WID)
+		UObjective * CachedObjective = PendingObjectives[i];
+		if (CachedObjective->WID == WID)
 		{
+			CachedObjective->Added = false;
 			PendingObjectives.RemoveAt(i);
 			if (i == 0)
 			{//We removed from the first position update the timer!
@@ -53,8 +61,10 @@ void UDataManager::RemoveObjective(const int32 WID)
 
 	for (int32 i = 0; i < NoTimerObjectives.Num(); i++)
 	{
-		if (NoTimerObjectives[i]->WID == WID)
+		UObjective * CachedObjective = NoTimerObjectives[i];
+		if (CachedObjective->WID == WID)
 		{
+			CachedObjective->Added = false;
 			NoTimerObjectives.RemoveAt(i);
 			return;
 		}
@@ -79,6 +89,7 @@ void UDataManager::UpdateObjectiveState(const int32 WID, UObjectiveState * Objec
 					case EObjectiveState::Failed:
 						
 						this->CallObjectiveFailedDelegate(Objective);
+						RunningObjectives[i]->Added = false;
 						RunningObjectives.RemoveAt(i);
 
 						if (Objective->FailureObjective)
@@ -92,6 +103,7 @@ void UDataManager::UpdateObjectiveState(const int32 WID, UObjectiveState * Objec
 					case EObjectiveState::Completed:
 
 						this->CallObjectiveCompleteDelegate(Objective);
+						RunningObjectives[i]->Added = false;
 						RunningObjectives.RemoveAt(i);
 						
 						if (Objective->SuccessObjective)
@@ -218,6 +230,259 @@ int32 UDataManager::GetWorldID()
 	this->WorldID = (this->WorldID + 1) % TNumericLimits<int32>::Max();
 	
 	return NewWorldID;
+}
+
+FDataManagerSaveState UDataManager::GetSaveState()
+{
+	FDataManagerSaveState SaveState;
+	
+	SaveState.WorldID = this->WorldID;
+	SaveState.CurrentGameTime = this->CurrentGameTime;
+	SaveState.Objectives = this->SerializeObjectiveSaveGraph();
+
+	this->LogSparseObjectiveGraph();
+	this->LogSparseObjectiveLists();
+	
+	return SaveState;
+}
+
+void UDataManager::RestoreSaveState(const FDataManagerSaveState& SaveState)
+{
+	this->WorldID = SaveState.WorldID;
+	this->CurrentGameTime = SaveState.CurrentGameTime;
+
+	//For Testing Purposes we empty these on SaveRestore
+	this->PendingObjectives.Empty();
+	this->RunningObjectives.Empty();
+	this->NoTimerObjectives.Empty();
+	
+	TMap<int32, UObjective*> ObjectiveMap;
+
+	TArray<int32> ObjectiveSaveKeys;
+	SaveState.Objectives.GetKeys(ObjectiveSaveKeys);
+
+	//First Reconstruct the Objectives from their base save state
+	for (const int32 ObjectiveSaveKey : ObjectiveSaveKeys)
+	{
+		UObjective * Objective = UObjective::Make(*SaveState.Objectives.Find(ObjectiveSaveKey));
+		ObjectiveMap.Add(ObjectiveSaveKey,Objective);
+		
+		if (Objective->Added)
+		{//Any Objectives that should be in the lists should be added to them now!
+			this->AddObjective(Objective);
+		}
+	}
+
+	//Reconnect the Graph based on Success & Failure WorldID's
+	
+	TArray<int32> ObjectiveKeys;
+	ObjectiveMap.GetKeys(ObjectiveKeys);
+	
+	for (const int32 ObjectiveKey : ObjectiveKeys)
+	{
+		UObjective * CachedObjective = *ObjectiveMap.Find(ObjectiveKey);
+
+		if (CachedObjective->SuccessObjectiveWID != -1)
+		{
+			if (ObjectiveMap.Contains(CachedObjective->SuccessObjectiveWID))
+			{
+				CachedObjective->SuccessObjective = *ObjectiveMap.Find(CachedObjective->SuccessObjectiveWID);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Failed to find objective for key: %d"), ObjectiveKey);
+			}
+		}
+
+		if (CachedObjective->FailureObjectiveWID != -1)
+		{
+			if (ObjectiveMap.Contains(CachedObjective->FailureObjectiveWID))
+			{
+				CachedObjective->FailureObjective = *ObjectiveMap.Find(CachedObjective->FailureObjectiveWID);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Failed to find objective for key: %d"), ObjectiveKey);
+			}
+		}
+	}
+
+	this->LogSparseObjectiveGraph();
+	this->LogSparseObjectiveLists();
+}
+
+void UDataManager::TestSave()
+{
+	UE_LOG(LogTemp, Display, TEXT("[Starting Save]"));
+	if (UDataManagerSave * SaveGameInstance = Cast<UDataManagerSave>(UGameplayStatics::CreateSaveGameObject(UDataManagerSave::StaticClass())))
+	{
+		// Set data on the save game object.
+		SaveGameInstance->SaveState = this->GetSaveState();
+		
+		// Save the data immediately.
+		if (!UGameplayStatics::SaveGameToSlot(SaveGameInstance, UDataManagerSave::SaveSlot, UDataManagerSave::UserIndex))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Error Saving Data"));
+		}
+	}
+	UE_LOG(LogTemp, Display, TEXT("[Done Saving]"));
+}
+
+void UDataManager::TestLoad()
+{
+	UE_LOG(LogTemp, Display, TEXT("[Starting Load]"));
+	if (const UDataManagerSave * LoadedState = Cast<UDataManagerSave>(UGameplayStatics::LoadGameFromSlot(UDataManagerSave::SaveSlot, UDataManagerSave::UserIndex)))
+	{
+		this->RestoreSaveState(LoadedState->SaveState);
+	}
+	UE_LOG(LogTemp, Display, TEXT("[Done Loading]"));
+}
+
+TMap<int32, UObjective*> UDataManager::SerializeObjectiveGraph()
+{	
+	//Gather Listed Objectives
+	TArray<UObjective*> Objectives;
+	Objectives.Append(this->PendingObjectives);
+	Objectives.Append(this->RunningObjectives);
+	Objectives.Append(this->NoTimerObjectives);
+
+	this->SerializedObjectiveMap.Empty(Objectives.Num());
+
+	for (UObjective * Objective : Objectives)
+	{
+		this->SerializeObjectiveSubGraph(Objective);
+	}
+	
+	return this->SerializedObjectiveMap;
+}
+
+void UDataManager::SerializeObjectiveSubGraph(UObjective* Objective)
+{
+	//Add Root Objective if it isn't present in the TMap
+	if (!this->SerializedObjectiveMap.Contains(Objective->WID))
+	{
+		this->SerializedObjectiveMap.Add(Objective->WID, Objective);
+	}
+
+	//Check Children, Only Recurse on them if they are not present in the SerializationMap
+	if (Objective->SuccessObjective)
+	{
+		if (!this->SerializedObjectiveMap.Contains(Objective->SuccessObjective->WID))
+		{
+			this->SerializeObjectiveSubGraph(Objective->SuccessObjective);
+		}
+	}
+
+	if (Objective->FailureObjective)
+	{
+		if (!this->SerializedObjectiveMap.Contains(Objective->FailureObjective->WID))
+		{
+			this->SerializeObjectiveSubGraph(Objective->FailureObjective);
+		}
+	}
+}
+
+TMap<int32, FObjectiveSave> UDataManager::SerializeObjectiveSaveGraph()
+{
+	TMap<int32, FObjectiveSave> ObjectiveSaves;
+	
+	const TMap<int32, UObjective*> Objectives = this->SerializeObjectiveGraph();
+
+	TArray<int32> Keys;
+	Objectives.GetKeys(Keys);
+
+	for (int32 Key : Keys)
+	{
+		ObjectiveSaves.Add(Key, (*Objectives.Find(Key))->GetSaveState());
+	}
+	
+	return ObjectiveSaves;	
+}
+
+void UDataManager::LogVerboseObjectiveGraph()
+{
+	const TMap<int32, UObjective*> Objectives = this->SerializeObjectiveGraph();
+
+	TArray<int32> Keys;
+	Objectives.GetKeys(Keys);
+
+	for (const int32 Key : Keys)
+	{
+		(*Objectives.Find(Key))->LogVerbose();
+	}
+}
+
+void UDataManager::LogSparseObjectiveGraph()
+{
+	const TMap<int32, UObjective*> Objectives = this->SerializeObjectiveGraph();
+
+	TArray<int32> Keys;
+	Objectives.GetKeys(Keys);
+
+	for (const int32 Key : Keys)
+	{
+		(*Objectives.Find(Key))->LogSparse();
+	}
+}
+
+void UDataManager::LogVerboseObjectiveLists()
+{
+	UE_LOG(LogTemp, Display, TEXT("[Start Pending Objective List]"));
+
+	for (const UObjective * Objective : this->PendingObjectives)
+	{
+		Objective->LogVerbose();
+	}
+	
+	UE_LOG(LogTemp, Display, TEXT("[End Pending Objective List]"));
+	
+	UE_LOG(LogTemp, Display, TEXT("[Start Running Objective List]"));
+
+	for (const UObjective * Objective : this->RunningObjectives)
+	{
+		Objective->LogVerbose();
+	}
+	
+	UE_LOG(LogTemp, Display, TEXT("[End Running Objective List]"));
+
+	UE_LOG(LogTemp, Display, TEXT("[Start NoTimer Objective List]"));
+
+	for (const UObjective * Objective : this->NoTimerObjectives)
+	{
+		Objective->LogVerbose();
+	}
+	
+	UE_LOG(LogTemp, Display, TEXT("[End NoTimer Objective List]"));
+}
+
+void UDataManager::LogSparseObjectiveLists()
+{
+	UE_LOG(LogTemp, Display, TEXT("[Start Pending Objective List]"));
+
+	for (const UObjective * Objective : this->PendingObjectives)
+	{
+		Objective->LogSparse();
+	}
+	
+	UE_LOG(LogTemp, Display, TEXT("[End Pending Objective List]"));
+	
+	UE_LOG(LogTemp, Display, TEXT("[Start Running Objective List]"));
+
+	for (const UObjective * Objective : this->RunningObjectives)
+	{
+		Objective->LogSparse();
+	}
+	
+	UE_LOG(LogTemp, Display, TEXT("[End Running Objective List]"));
+
+	UE_LOG(LogTemp, Display, TEXT("[Start NoTimer Objective List]"));
+
+	for (const UObjective * Objective : this->NoTimerObjectives)
+	{
+		Objective->LogSparse();
+	}
+	
+	UE_LOG(LogTemp, Display, TEXT("[End NoTimer Objective List]"));
 }
 
 void UDataManager::AddObjectiveRunning(UObjective* NewObjective)

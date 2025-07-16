@@ -57,6 +57,44 @@ public:
 };
 
 /**
+ * Special Save State Struct for UObjectives
+ */
+USTRUCT()
+struct PROJECT_WATCHER_API FObjectiveSave
+{
+	GENERATED_BODY()
+
+	UPROPERTY(SaveGame)
+	int32 WID = -1;
+
+	UPROPERTY(SaveGame)
+	FString Title = TEXT("");
+
+	UPROPERTY(SaveGame)
+	FString Description = TEXT("");
+	
+	UPROPERTY(SaveGame)
+	FObjectiveTime ObjectiveTime;
+	
+	UPROPERTY()
+	UObjectiveState * ObjectiveState = nullptr;
+
+	//AActor Marker
+	//For now Ignore because certain markers are attached to actors that need to be spawned first
+	//Since I don't know what is going to be spawned / how I'll ignore this as it is effectively useless
+
+	UPROPERTY(SaveGame)
+	int32 SuccessObjectiveWID = -1;
+
+	UPROPERTY(SaveGame)
+	int32 FailureObjectiveWID = -1;
+
+	/* Flag for if the Objective was added into DataManager, otherwise it existed only as a reference somewhere in the objective graph */
+	UPROPERTY(SaveGame)
+	bool Added = false;
+};
+
+/**
  * Objective
  */
 UCLASS(Blueprintable)
@@ -77,7 +115,7 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
 	FObjectiveTime ObjectiveTime;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
 	UObjectiveState * ObjectiveState = nullptr;
 	
@@ -87,11 +125,26 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
 	UObjective * SuccessObjective = nullptr;
 
+	/* This is used as a temp var store when reinitializing from a SaveState & NOTHING ELSE */
+	int32 SuccessObjectiveWID = -1;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
 	UObjective * FailureObjective = nullptr;
+
+	/* This is used as a temp var store when reinitializing from a SaveState & NOTHING ELSE */
+	int32 FailureObjectiveWID = -1;
+
+	/* Flag for if the Objective was added into DataManager, otherwise it existed only as a reference somewhere in the objective graph */
+	bool Added = false;
 	
 public:
 
+	static UObjective * Make(const FObjectiveSave& Save);
+	
+	void LogVerbose() const;
+
+	void LogSparse() const;
+	
 	UFUNCTION(BlueprintCallable, Category = "Objective")
 	void Setup(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn);
 	
@@ -112,5 +165,8 @@ public:
 	void SetInProgress() const;
 	
 	EObjectiveState Evaluate() const;
-};
 
+	FObjectiveSave GetSaveState();
+
+	void RestoreSaveState(const FObjectiveSave& SaveState);
+};
