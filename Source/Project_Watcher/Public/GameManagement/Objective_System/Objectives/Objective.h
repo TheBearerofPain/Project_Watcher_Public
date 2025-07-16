@@ -76,7 +76,7 @@ struct PROJECT_WATCHER_API FObjectiveSave
 	UPROPERTY(SaveGame)
 	FObjectiveTime ObjectiveTime;
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	UObjectiveState * ObjectiveState = nullptr;
 
 	//AActor Marker
