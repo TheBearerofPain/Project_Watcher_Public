@@ -2,6 +2,29 @@
 
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveLooseSubObjective/ObjectiveLooseSubObjectiveState.h"
 
+UObjectiveState* UObjectiveLooseSubObjectiveState::GetCopy()
+{
+	UObjectiveLooseSubObjectiveState * Copy = NewObject<UObjectiveLooseSubObjectiveState>();
+
+	Copy->SubObjectiveList.Append(this->SubObjectiveList);
+	Copy->CompletionThreshold = this->CompletionThreshold;
+	
+	return Copy;
+}
+
+void UObjectiveLooseSubObjectiveState::UpdateFromCopy(UObjectiveState* ObjectiveStateIn)
+{
+	if (ObjectiveStateIn)
+	{
+		if (const UObjectiveLooseSubObjectiveState * Source = Cast<UObjectiveLooseSubObjectiveState>(ObjectiveStateIn))
+		{
+			this->SubObjectiveList.Empty();
+			this->SubObjectiveList.Append(Source->SubObjectiveList);
+			this->CompletionThreshold = Source->CompletionThreshold;
+		}
+	}
+}
+
 void UObjectiveLooseSubObjectiveState::SetPending()
 {
 	for (int32 i = 0; i < this->SubObjectiveList.Num(); i++)

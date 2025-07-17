@@ -5,34 +5,31 @@
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveLooseSubObjective/ObjectiveLooseSubObjectiveState.h"
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveStrictSubObjective/ObjectiveStrictSubObjectiveState.h"
 
-UObjective* UObjectiveSupport::CreateBasicObjective(const int32 WID, const FString& Title,
-                                                    const FString& Description, const FObjectiveTime& ObjectiveTime)
+UObjectiveBasicState * UObjectiveSupport::CreateBasicState()
 {
-	UObjectiveState * BasicState = NewObject<UObjectiveBasicState>();
-	UObjective * Objective = NewObject<UObjective>();
-	Objective->Setup(WID, Title, Description, BasicState, ObjectiveTime);
-	return Objective;
+	UObjectiveBasicState * BasicState = NewObject<UObjectiveBasicState>();
+	return BasicState;
 }
 
-UObjective* UObjectiveSupport::AddSuccessObjective(UObjective* Objective, UObjective* SuccessObjective)
+UObjective* UObjectiveSupport::SetSuccessObjective(UObjective* Objective, UObjective* SuccessObjective)
 {
 	Objective->SetSuccessObjective(SuccessObjective);
 	return Objective;
 }
 
-UObjective* UObjectiveSupport::AddFailureObjective(UObjective* Objective, UObjective* FailureObjective)
+UObjective* UObjectiveSupport::SetFailureObjective(UObjective* Objective, UObjective* FailureObjective)
 {
 	Objective->SetFailureObjective(FailureObjective);
 	return Objective;
 }
 
-UObjective* UObjectiveSupport::AddMarker(UObjective* Objective, AActor* Marker)
+UObjective* UObjectiveSupport::SetMarker(UObjective* Objective, AActor* Marker)
 {
 	Objective->SetObjectiveMarker(Marker);
 	return Objective;
 }
 
-UObjective* UObjectiveSupport::AddSuccessAndFailureObjectives(UObjective* Objective, UObjective* SuccessObjective,
+UObjective* UObjectiveSupport::SetSuccessAndFailureObjectives(UObjective* Objective, UObjective* SuccessObjective,
 	UObjective* FailureObjective)
 {
 	Objective->SetSuccessObjective(SuccessObjective);
@@ -40,28 +37,20 @@ UObjective* UObjectiveSupport::AddSuccessAndFailureObjectives(UObjective* Object
 	return Objective;
 }
 
-UObjective* UObjectiveSupport::CreateLooseSubObjective(const int32 WID, const FString& Title,
-                                                       const FString& Description, const TArray<FSubObjective>& SubObjectives, const int32 CompletionThreshold, const FObjectiveTime& ObjectiveTime)
+UObjectiveLooseSubObjectiveState * UObjectiveSupport::CreateLooseSubObjectiveState(const TArray<FSubObjective>& SubObjectives, const int32 CompletionThreshold)
 {
 	UObjectiveLooseSubObjectiveState * LooseSubObjectiveState = NewObject<UObjectiveLooseSubObjectiveState>();
 	LooseSubObjectiveState->SetSubObjectiveState_Implementation(SubObjectives, CompletionThreshold);
 	
-	UObjective * Objective = NewObject<UObjective>();
-	Objective->Setup(WID, Title, Description, LooseSubObjectiveState, ObjectiveTime);
-	
-	return Objective;
+	return LooseSubObjectiveState;
 }
 
-UObjective* UObjectiveSupport::CreateStrictSubObjective(const int32 WID, const FString& Title,
-	const FString& Description, const TArray<FSubObjective>& SubObjectives, const FObjectiveTime& ObjectiveTime)
+UObjectiveStrictSubObjectiveState * UObjectiveSupport::CreateStrictSubObjectiveState(const TArray<FSubObjective>& SubObjectives)
 {
 	UObjectiveStrictSubObjectiveState * StrictSubObjectiveState = NewObject<UObjectiveStrictSubObjectiveState>();
 	StrictSubObjectiveState->SetSubObjectiveState_Implementation(SubObjectives);
-
-	UObjective * Objective = NewObject<UObjective>();
-	Objective->Setup(WID, Title, Description, StrictSubObjectiveState, ObjectiveTime);
 	
-	return Objective;
+	return StrictSubObjectiveState;
 }
 
 TArray<FSubObjective> UObjectiveSupport::CreateSubObjectiveListFromItem(const FSubObjective& SubObjective)

@@ -20,6 +20,10 @@ private:
 	int32 CompletionThreshold = 1;
 public:
 
+	virtual UObjectiveState * GetCopy() override;
+
+	virtual void UpdateFromCopy(UObjectiveState* ObjectiveStateIn) override;
+
 	virtual void SetPending() override;
 
 	virtual void SetInProgress() override;

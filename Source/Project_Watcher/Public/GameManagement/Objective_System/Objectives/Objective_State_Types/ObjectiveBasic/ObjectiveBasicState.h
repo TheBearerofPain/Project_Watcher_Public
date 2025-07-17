@@ -16,10 +16,14 @@ class PROJECT_WATCHER_API UObjectiveBasicState : public UObjectiveState , public
 {
 	GENERATED_BODY()
 private:
+	
 	EObjectiveState ObjectiveState = EObjectiveState::Pending;
-	
-	
+
 public:
+
+	virtual UObjectiveState * GetCopy() override;
+
+	virtual void UpdateFromCopy(UObjectiveState* ObjectiveStateIn) override;
 
 	virtual void SetPending() override;
 

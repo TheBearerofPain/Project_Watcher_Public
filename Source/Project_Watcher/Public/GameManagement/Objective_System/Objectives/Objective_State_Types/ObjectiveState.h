@@ -50,6 +50,18 @@ class PROJECT_WATCHER_API UObjectiveState : public UObject
 public:
 	
 	/**
+	 * Gets a Copy Object
+	 * @return New UObjectiveState Object
+	 */
+	virtual UObjectiveState * GetCopy();
+
+	/**
+	 * Updates via Deep Copy with the given ObjectiveState
+	 * @param ObjectiveStateIn ObjectiveState we are updating with
+	 */
+	virtual void UpdateFromCopy(UObjectiveState * ObjectiveStateIn);
+	
+	/**
 	 * Sets the ObjectiveState to Pending
 	 */
 	virtual void SetPending();

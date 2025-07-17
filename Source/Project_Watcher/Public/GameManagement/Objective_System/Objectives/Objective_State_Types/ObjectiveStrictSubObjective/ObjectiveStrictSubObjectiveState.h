@@ -20,8 +20,12 @@ private:
 	TArray<FSubObjective> SubObjectiveList;
 public:
 
-	virtual void SetPending() override;
+	virtual UObjectiveState * GetCopy() override;
 
+	virtual void UpdateFromCopy(UObjectiveState* ObjectiveStateIn) override;
+	
+	virtual void SetPending() override;
+	
 	virtual void SetInProgress() override;
 	
 	virtual TArray<FSubObjective> GetSubObjectiveState_Implementation() override;

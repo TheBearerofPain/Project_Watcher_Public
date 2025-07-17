@@ -7,7 +7,7 @@
 #include "GameManagement/Objective_System/Objectives/Objective.h"
 #include "DataManager.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FObjectiveDelegate, UObjective *, Objective);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FObjectiveDelegate, const FObjectiveData&, Objective);
 
 USTRUCT()
 struct PROJECT_WATCHER_API FDataManagerSaveState
@@ -25,7 +25,6 @@ struct PROJECT_WATCHER_API FDataManagerSaveState
 };
 
 //@TODO figure out how to do seasons in a nice configurable way
-//@TODO take another look at marking Added with Add Remove & Update! this is very important & Potentially sensitive code
 
 UENUM(BlueprintType)
 enum ETimeAnchor
@@ -128,26 +127,37 @@ public:
 
 	/**
 	 * Adds a new objective to the processor
+	 * @TODO Look at doing a full deep copy the Objective & its graph in order to prevent accidental tampering
 	 * @param NewObjective The Objective we are adding
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Objective")
 	void AddObjective(UObjective * NewObjective);
 
 	/**
-	 * Removes an objective from the processor
-	 * DOES NOT fire any associated events if it happens to be complete or expired
-	 * @param WID The event World ID we are removing
+	 * Creates an Objective
+	 * @param TitleIn Title
+	 * @param DescriptionIn Description
+	 * @param ObjectiveStateIn Objective State , How the Objective will be evaluated
+	 * @param ObjectiveTimeIn Objective Time
+	 * @return Initialized Objective
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective")
+	UObjective * CreateObjective(const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn);
+	
+	/**
+	 * Takes in a TMap that composes an Objective Graph
+	 * @param Objectives TMap we use to make the Objective Graph
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Objective")
-	void RemoveObjective(const int32 WID);
-
+	void AddObjectiveGraphMap(TMap<int32, UObjective*> Objectives);
+	
 	/**
 	 * Updates the Objective with the matching WID, with the given state, We ONLY search running objectives to update
-	 * @param WID The World ID we are looking for
+	 * @param WorldIDIn The World ID we are looking for
 	 * @param ObjectiveStateIn The State we are updating with
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Objective")
-	void UpdateObjectiveState(const int32 WID, UObjectiveState * ObjectiveStateIn);
+	void UpdateObjectiveState(const int32 WorldIDIn, UObjectiveState * ObjectiveStateIn);
 
 	//Objective State//
 
@@ -356,6 +366,16 @@ public:
 
 private:
 
+	// Removers //
+
+	/**
+	 * Removes the given Objective from the Objective Lists
+	 * @param WorldIDIn Objective WorldID we are looking to remove
+	 */
+	void RemoveObjective(const int32 WorldIDIn);
+	
+	// Removers //
+	
 	// Graph Serializer //
 
 	/* This map is used to serialize the graph in order to deal with cycles in the graph properly */
@@ -451,25 +471,25 @@ private:
 	 * Used to CallObjectiveCompleteDelegate
 	 * @param Objective The Objective we are broadcasting as completed
 	 */
-	void CallObjectiveCompleteDelegate(UObjective * Objective) const;
+	void CallObjectiveCompleteDelegate(const UObjective * Objective) const;
 
 	/**
 	 * Used to CallObjectiveFailedDelegate
 	 * @param Objective The Objective we are broadcasting as failed
 	 */
-	void CallObjectiveFailedDelegate(UObjective * Objective) const;
+	void CallObjectiveFailedDelegate(const UObjective * Objective) const;
 
 	/**
 	 * Used to CallObjectiveTimerExpiredDelegate
 	 * @param Objective The Objective we are broadcasting as expired
 	 */
-	void CallObjectiveTimerExpiredDelegate(UObjective * Objective) const;
+	void CallObjectiveTimerExpiredDelegate(const UObjective * Objective) const;
 
 	/**
 	 * Used to CallObjectiveStartedDelegate
 	 * @param Objective The Objective we are broadcasting as started
 	 */
-	void CallObjectiveTimerStartedDelegate(UObjective * Objective) const;
+	void CallObjectiveTimerStartedDelegate(const UObjective * Objective) const;
 
 	/**
 	 * Evaluates an objectives completion state

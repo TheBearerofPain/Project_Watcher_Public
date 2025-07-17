@@ -2,6 +2,27 @@
 
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveStrictSubObjective/ObjectiveStrictSubObjectiveState.h"
 
+UObjectiveState* UObjectiveStrictSubObjectiveState::GetCopy()
+{
+	UObjectiveStrictSubObjectiveState * Copy = NewObject<UObjectiveStrictSubObjectiveState>();
+
+	Copy->SubObjectiveList.Append(this->SubObjectiveList);
+	
+	return Copy;
+}
+
+void UObjectiveStrictSubObjectiveState::UpdateFromCopy(UObjectiveState* ObjectiveStateIn)
+{
+	if (ObjectiveStateIn)
+	{
+		if (const UObjectiveStrictSubObjectiveState * Source = Cast<UObjectiveStrictSubObjectiveState>(ObjectiveStateIn))
+		{
+			this->SubObjectiveList.Empty();
+			this->SubObjectiveList.Append(Source->SubObjectiveList);
+		}
+	}
+}
+
 void UObjectiveStrictSubObjectiveState::SetPending()
 {
 	for (int32 i = 0; i < this->SubObjectiveList.Num(); i++)

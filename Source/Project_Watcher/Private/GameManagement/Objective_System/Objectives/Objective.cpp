@@ -11,7 +11,7 @@ UObjective* UObjective::Make(const FObjectiveSave& Save)
 
 void UObjective::LogVerbose() const
 {
-	FString LogString = "[Start Objective: " + FString::FromInt(this->WID) + "]\n";
+	FString LogString = "[Start Objective: " + FString::FromInt(this->WorldID) + "]\n";
 	LogString += "ObjectName: " + this->GetName() + " ClassName: " + this->GetClass()->GetName() + "\n";
 	LogString += "Title: " + this->Title + "\n";
 	LogString += "Description: " + this->Description + "\n";
@@ -19,24 +19,24 @@ void UObjective::LogVerbose() const
 	LogString += "EndTime: " + FString::FromInt(this->ObjectiveTime.EndTime) + "\n";
 	LogString += this->ObjectiveTime.NoTimer ? "NoTimer: True\n" : "NoTimer: False\n";
 	LogString += "ObjectiveState ObjectName: " + this->ObjectiveState->GetName() + " ObjectiveState ClassName: " + this->ObjectiveState->GetClass()->GetName() + "\n";
-	LogString += "SuccessObjective WID: " + FString::FromInt(this->SuccessObjectiveWID) + "\n";
-	LogString += "FailureObjective WID: " + FString::FromInt(this->FailureObjectiveWID) + "\n";
+	LogString += "SuccessObjective WID: " + FString::FromInt(this->SuccessObjectiveWorldID) + "\n";
+	LogString += "FailureObjective WID: " + FString::FromInt(this->FailureObjectiveWorldID) + "\n";
 	LogString += this->Added ? "Added: True\n" : "Added: False\n";
-	LogString += "[End Objective: " + FString::FromInt(this->WID) + "]\n";
+	LogString += "[End Objective: " + FString::FromInt(this->WorldID) + "]\n";
 
 	UE_LOG(LogTemp, Display, TEXT("%s"), *LogString);
 }
 
 void UObjective::LogSparse() const
 {
-	const FString LogString = "[Objective: " + FString::FromInt(this->WID) + "]";
+	const FString LogString = "[Objective: " + FString::FromInt(this->WorldID) + "]";
 	UE_LOG(LogTemp, Display, TEXT("%s"), *LogString);
 }
 
-void UObjective::Setup(const int32 WIDIn, const FString& TitleIn, const FString& DescriptionIn,
+void UObjective::Setup(const int32 WorldIDIn, const FString& TitleIn, const FString& DescriptionIn,
                        UObjectiveState* ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn)
 {
-	this->WID = WIDIn;
+	this->WorldID = WorldIDIn;
 	this->Title = TitleIn;
 	this->Description = DescriptionIn;
 	this->ObjectiveState = ObjectiveStateIn;
@@ -51,13 +51,13 @@ void UObjective::SetObjectiveMarker(AActor* ObjectiveMarkerIn)
 void UObjective::SetSuccessObjective(UObjective * SuccessObjectiveIn)
 {
 	this->SuccessObjective = SuccessObjectiveIn;
-	this->SuccessObjectiveWID = SuccessObjectiveIn->WID;
+	this->SuccessObjectiveWorldID = SuccessObjectiveIn->WorldID;
 }
 
 void UObjective::SetFailureObjective(UObjective* FailureObjectiveIn)
 {
 	this->FailureObjective = FailureObjectiveIn;
-	this->FailureObjectiveWID = FailureObjectiveIn->WID;
+	this->FailureObjectiveWorldID = FailureObjectiveIn->WorldID;
 }
 
 void UObjective::SetSuccessAndFailureObjectives(UObjective* SuccessObjectiveIn, UObjective* FailureObjectiveIn)
@@ -92,13 +92,13 @@ FObjectiveSave UObjective::GetSaveState()
 {
 	FObjectiveSave SaveState = FObjectiveSave();
 
-	SaveState.WID = this->WID;
+	SaveState.WorldID = this->WorldID;
 	SaveState.Title = this->Title;
 	SaveState.Description = this->Description;
 	SaveState.ObjectiveTime = this->ObjectiveTime;
 	SaveState.ObjectiveState = this->ObjectiveState;
-	SaveState.SuccessObjectiveWID = (this->SuccessObjective) ? this->SuccessObjective->WID : -1;
-	SaveState.FailureObjectiveWID = (this->FailureObjective) ? this->FailureObjective->WID : -1;
+	SaveState.SuccessObjectiveWorldID = (this->SuccessObjective) ? this->SuccessObjective->WorldID : -1;
+	SaveState.FailureObjectiveWorldID = (this->FailureObjective) ? this->FailureObjective->WorldID : -1;
 	SaveState.Added	= this->Added;
 	
 	return SaveState;
@@ -106,12 +106,30 @@ FObjectiveSave UObjective::GetSaveState()
 
 void UObjective::RestoreSaveState(const FObjectiveSave& SaveState)
 {
-	this->WID = SaveState.WID;
+	this->WorldID = SaveState.WorldID;
 	this->Title = SaveState.Title;
 	this->Description = SaveState.Description;
 	this->ObjectiveTime = SaveState.ObjectiveTime;
 	this->ObjectiveState = SaveState.ObjectiveState;	
-	this->SuccessObjectiveWID = SaveState.SuccessObjectiveWID;
-	this->FailureObjectiveWID = SaveState.FailureObjectiveWID;
+	this->SuccessObjectiveWorldID = SaveState.SuccessObjectiveWorldID;
+	this->FailureObjectiveWorldID = SaveState.FailureObjectiveWorldID;
 	this->Added = SaveState.Added;
+}
+
+FObjectiveData UObjective::GetObjectiveData() const
+{
+	FObjectiveData ObjectiveData = FObjectiveData();
+
+	ObjectiveData.WorldID = this->WorldID;
+	ObjectiveData.Title = this->Title;
+	ObjectiveData.Description = this->Description;
+	ObjectiveData.ObjectiveTime = this->ObjectiveTime;
+	ObjectiveData.ObjectiveState = this->ObjectiveState->GetCopy();
+	
+	return ObjectiveData;
+}
+
+void UObjective::UpdateObjectiveState(UObjectiveState * ObjectiveStateIn) const
+{
+	this->ObjectiveState->UpdateFromCopy(ObjectiveStateIn);
 }
