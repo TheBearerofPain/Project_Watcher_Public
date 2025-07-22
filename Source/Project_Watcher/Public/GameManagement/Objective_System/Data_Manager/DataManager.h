@@ -51,18 +51,30 @@ class PROJECT_WATCHER_API UDataManager : public UObject
 private:
 
 	//Objective State//
+
+	/*
+	 * Objectives have the following life cycle,
+	 * UnScheduled, They are present in the ObjectiveMap, But NOT in any lists.
+	 * Pending, They are NOT actively running but are queued up to start in the future.
+	 * Running, They ARE actively running, and will expire if given enough time, these can ALSO be failed or completed.
+	 * NoTimer, They ARE actively running, and will NOT expire, they can only be failed or completed.
+	 *
+	 * End of Life, Once an Objective Expires, Fails or Completes, any child objectives will be queued up & the parent
+	 * Objective is removed from the Map & Any lists it resided within.
+	 */
 	
-	//Running Objective List
-	UPROPERTY()
-	TArray<UObjective*> RunningObjectives;
+	/* Pending Objective WorldID's */
+	TArray<int32> PendingObjectives;
 
-	//Pending Objective List
-	UPROPERTY()
-	TArray<UObjective*> PendingObjectives;
+	/* Running Objective WorldID's */
+	TArray<int32> RunningObjectives;
 
-	//No Timer Objective List
+	/* NoTimer Objective WorldID's */
+	TArray<int32> NoTimerObjectives;
+
+	/* ObjectiveMap */
 	UPROPERTY()
-	TArray<UObjective*> NoTimerObjectives;
+	TMap<int32, UObjective*> Objectives;
 
 	//Objective Timer Handle for when the next soonest objective expires
 	FTimerHandle RunningObjectiveTimerHandle;
@@ -95,7 +107,7 @@ private:
 	FTimerHandle GameTimeTimerHandle;
 
 	/* Map of TimeAnchors for various checkpoints in the game */
-	TMap<ETimeAnchor, int64> TimeMap = {FTAnchor(GameStart,0)};
+	TMap<ETimeAnchor, int64> TimeAnchorMap = {FTAnchor(GameStart,0)};
 	
 	//Game Time State//
 
@@ -127,7 +139,6 @@ public:
 
 	/**
 	 * Adds a new objective to the processor
-	 * @TODO Look at doing a full deep copy the Objective & its graph in order to prevent accidental tampering
 	 * @param NewObjective The Objective we are adding
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Objective")
@@ -143,13 +154,43 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective")
 	UObjective * CreateObjective(const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn);
-	
+
 	/**
-	 * Takes in a TMap that composes an Objective Graph
-	 * @param Objectives TMap we use to make the Objective Graph
+	 * Creates an Objective
+	 * @param TitleIn Title 
+	 * @param DescriptionIn Description
+	 * @param ObjectiveStateIn Objective State, How the Objective will be evaluated
+	 * @param ObjectiveTimeIn Objective Time
+	 * @param SuccessObjectiveIn SuccessObjective
+	 * @return Initialized Objective
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Objective")
-	void AddObjectiveGraphMap(TMap<int32, UObjective*> Objectives);
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective")
+	UObjective * CreateObjectiveWithSuccessObjective(const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn, UObjective * SuccessObjectiveIn);
+
+	/**
+	 * Creates Objective
+	 * @param TitleIn Title
+	 * @param DescriptionIn Description 
+	 * @param ObjectiveStateIn Objective State, How the Objective will be evaluated
+	 * @param ObjectiveTimeIn Objective Time
+	 * @param FailureObjectiveIn FailureObjective
+	 * @return Initialized Objective
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective")
+	UObjective * CreateObjectiveWithFailureObjective(const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn, UObjective * FailureObjectiveIn);
+
+	/**
+	 * Creates Objective
+	 * @param TitleIn Title
+	 * @param DescriptionIn Description 
+	 * @param ObjectiveStateIn Objective State, How the Objective will be evaluated
+	 * @param ObjectiveTimeIn Objective Time
+	 * @param SuccessObjectiveIn SuccessObjective
+	 * @param FailureObjectiveIn FailureObjective
+	 * @return Initialized Objective
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective")
+	UObjective * CreateObjectiveWithSuccessAndFailureObjectives(const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn, UObjective * SuccessObjectiveIn, UObjective * FailureObjectiveIn);
 	
 	/**
 	 * Updates the Objective with the matching WID, with the given state, We ONLY search running objectives to update
@@ -173,31 +214,20 @@ public:
 	int64 GetCurrentGameSeconds() const;
 
 	/**
-	 * Converts Game Minutes to Game Seconds
-	 * Use this if you want an objective to take Game Minutes
-	 * @param GameMinutes Game Minutes
-	 * @return Amount of Game Seconds in the Game Minutes Provided
+	 * Converts Real World seconds to Game Seconds
+	 * @param RealWorldSeconds Real World Seconds
+	 * @return Game Seconds in the Real World Seconds Provided
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ObjectiveTime")
-	int64 GameMinutesToGameSeconds(const int64 GameMinutes) const;
+	int64 RealWorldSecondsToGameSeconds(const int64 RealWorldSeconds) const;
 
 	/**
-	 * Converts Real World Minutes to Game Seconds
-	 * Use this if you want an objective to take Real World Minutes
-	 * @param RealWorldMinutes Real World Minutes
-	 * @return Amount of Game Seconds in the Real World Minutes Provided
+	 * Converts RealWorldMinutes to GameSeconds
+	 * @param RealWorldMinutes RealWorldMinutes
+	 * @return Game Seconds in the Real World Minutes provided
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ObjectiveTime")
 	int64 RealWorldMinutesToGameSeconds(const int64 RealWorldMinutes) const;
-
-	/**
-	 * Converts Game Hours to Game Seconds
-	 * Use this if you want an objective to take Game Hours
-	 * @param GameHours Game Hours
-	 * @return Amount of Game Seconds in the Game Hours Provided
-	 */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ObjectiveTime")
-	int64 GameHoursToGameSeconds(const int64 GameHours) const;
 
 	/**
 	 * Converts Real World Hours to Game Seconds
@@ -207,16 +237,6 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ObjectiveTime")
 	int64 RealWorldHoursToGameSeconds(const int64 RealWorldHours) const;
-
-	/**
-	 * Converts Game Hours & Minutes to Game Seconds
-	 * Use this if you want an objective to take Game Hours & Minutes
-	 * @param GameHours Game Hours
-	 * @param GameMinutes Game Minutes
-	 * @return Amount of Game Seconds in the Provided Game Hours & Minutes
-	 */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ObjectiveTime")
-	int64 GameHoursAndMinutesToGameSeconds(const int64 GameHours, const int64 GameMinutes) const;
 
 	/**
 	 * Converts RealWorld Hours & Minutes to Game Seconds
@@ -235,14 +255,14 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ObjectiveTime")
 	int64 GameDateToGameSeconds(const FDateTime& GameDate) const;
-
+	
 	/**
 	 * Takes in GameSeconds and Converts it into a Date
 	 * @param GameSeconds The Game Seconds we input
 	 * @return The Game Date
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ObjectiveTime")
-	FDateTime GameSecondsToGameDateTime(const int64 GameSeconds) const;
+	FDateTime GameSecondsToGameDate(const int64 GameSeconds) const;
 	
 	/**
 	 * Computes GameDate.ToUnixTimeStamp + CurrentGameTime,
@@ -267,7 +287,7 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ObjectiveTime")
 	FDateTime GetObjectiveEndDate(const FObjectiveTime& ObjectiveTime) const;
-
+	
 	//FDateTime Accessors & Conversions//
 	
 	//Creators for ObjectiveTime//
@@ -303,7 +323,7 @@ public:
 	/**
 	 * Creates an Objective From the StartDate with a specified duration
 	 * @param StartDate The StartDate of the Objective
-	 * @param DurationInSeconds The Duration of the objective in seconds
+	 * @param DurationInSeconds The Duration of the objective in Real World Seconds
 	 * @return The setup ObjectiveTime
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ObjectiveTime")
@@ -327,8 +347,6 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "World ID")
 	int32 GetWorldID();
-	
-	//World ID State//
 
 	//Save State//
 
@@ -376,32 +394,6 @@ private:
 	
 	// Removers //
 	
-	// Graph Serializer //
-
-	/* This map is used to serialize the graph in order to deal with cycles in the graph properly */
-	UPROPERTY()
-	TMap<int32, UObjective*> SerializedObjectiveMap;
-
-	/**
-	 * Serializes the entire Objective Graph
-	 * @return TMap of the Objective Graph
-	 */
-	TMap<int32, UObjective*> SerializeObjectiveGraph();
-
-	/**
-	 * Serializes the given Objective & its sub graph into SerializedObjectiveMap
-	 * @param Objective The Objective we are serializing
-	 */
-	void SerializeObjectiveSubGraph(UObjective * Objective);
-
-	/**
-	 * Serializes the entire Objective Graph & Converts it into a savable form
-	 * @return FObjectiveSave TMap
-	 */
-	TMap<int32, FObjectiveSave> SerializeObjectiveSaveGraph();
-
-	// Graph Serializer //
-	
 	// Save State //
 
 	/**
@@ -424,19 +416,19 @@ private:
 	 * Adds an Objective to the RunningObjective List
 	 * @param NewObjective The Objective we are adding
 	 */
-	void AddObjectiveRunning(UObjective * NewObjective);
+	void AddObjectiveRunning(const UObjective * NewObjective);
 
 	/**
 	 * Adds an Objective to the PendingObjective List
 	 * @param NewObjective The Objective we are adding
 	 */
-	void AddObjectivePending(UObjective * NewObjective);
+	void AddObjectivePending(const UObjective * NewObjective);
 
 	/**
 	 * Adds an Objective to the NoTimerObjective List
 	 * @param NewObjective The Objective we are adding
 	 */
-	void AddObjectiveNoTimer(UObjective * NewObjective);
+	void AddObjectiveNoTimer(const UObjective * NewObjective);
 	
 	/**
 	 * Sets the timer until the next objective IF any

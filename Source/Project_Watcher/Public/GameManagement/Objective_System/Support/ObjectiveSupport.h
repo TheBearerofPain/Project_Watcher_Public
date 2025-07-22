@@ -20,13 +20,6 @@ class PROJECT_WATCHER_API UObjectiveSupport : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
-	
-	/**
-	 * Creates a Basic Objective State
-	 * @return Initialized Basic Objective State
-	 */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective System")
-	static UObjectiveBasicState * CreateBasicState();
 
 	/**
 	 * Sets the SuccessObjective in the Given Objective
@@ -64,7 +57,14 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective System")
 	static UObjective * SetSuccessAndFailureObjectives(UObjective * Objective, UObjective * SuccessObjective, UObjective * FailureObjective);
-
+	
+	/**
+	 * Creates a Basic Objective State
+	 * @return Initialized Basic Objective State
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective System")
+	static UObjectiveBasicState * CreateBasicState();
+	
 	/**
 	 * Creates a LooseSubObjective Objective State
 	 * ONLY the CompletionThreshold amount of SubObjectives need to be completed for this to evaluate as complete

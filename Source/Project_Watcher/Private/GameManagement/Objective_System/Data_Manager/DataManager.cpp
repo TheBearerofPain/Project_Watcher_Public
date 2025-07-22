@@ -3,13 +3,24 @@
 #include "Project_Watcher/Public/GameManagement/Objective_System/Data_Manager/DataManager.h"
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveLooseSubObjective/ObjectiveLooseSubObjectiveState.h"
 #include "GameManagement/Objective_System/Support/DataManagerSave.h"
+#include "GameManagement/Objective_System/Support/ObjectiveGraphSupport.h"
 #include "Kismet/GameplayStatics.h"
 
 void UDataManager::AddObjective(UObjective * NewObjective)
 {
 	if (NewObjective)
 	{
-		NewObjective->Added = true;
+		NewObjective->Scheduled = true;
+
+		if (NewObjective->ObjectiveTime.EvaluateAtScheduleTime)
+		{//Ue the CurrentTime to compute start and end times!
+			NewObjective->ObjectiveTime.StartTime = this->GetCurrentGameSeconds() + NewObjective->ObjectiveTime.ScheduleStartTimeOffset;
+			NewObjective->ObjectiveTime.EndTime = this->GetCurrentGameSeconds() + NewObjective->ObjectiveTime.ScheduleStartTimeOffset + NewObjective->ObjectiveTime.ScheduleDuration;
+		}
+
+		UObjectiveGraphSupport * ObjectiveGraphSupport = UObjectiveGraphSupport::Make();
+		const TMap<int32, UObjective*> ObjectiveSubGraph = ObjectiveGraphSupport->SerializeObjective(NewObjective);
+		this->Objectives.Append(ObjectiveSubGraph);//Add SubGraph to MainGraph
 		
 		if (this->CurrentGameTime > NewObjective->ObjectiveTime.StartTime)
 		{//The Objective Is Running
@@ -36,36 +47,51 @@ UObjective * UDataManager::CreateObjective(const FString& TitleIn, const FString
 	return NewObjective;
 }
 
-void UDataManager::AddObjectiveGraphMap(TMap<int32, UObjective*> Objectives)
+UObjective* UDataManager::CreateObjectiveWithSuccessObjective(const FString& TitleIn, const FString& DescriptionIn,
+	UObjectiveState* ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn, UObjective* SuccessObjectiveIn)
 {
-	//Pending Investigation
+	UObjective * NewObjective = NewObject<UObjective>();
+	NewObjective->Setup(this->GetWorldID(), TitleIn, DescriptionIn, ObjectiveStateIn, ObjectiveTimeIn);
+	NewObjective->SetSuccessObjective(SuccessObjectiveIn);
+	return NewObjective;
+}
+
+UObjective* UDataManager::CreateObjectiveWithFailureObjective(const FString& TitleIn, const FString& DescriptionIn,
+	UObjectiveState* ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn, UObjective* FailureObjectiveIn)
+{
+	UObjective * NewObjective = NewObject<UObjective>();
+	NewObjective->Setup(this->GetWorldID(), TitleIn, DescriptionIn, ObjectiveStateIn, ObjectiveTimeIn);
+	NewObjective->SetFailureObjective(FailureObjectiveIn);
+	return NewObjective;
+}
+
+UObjective* UDataManager::CreateObjectiveWithSuccessAndFailureObjectives(const FString& TitleIn,
+	const FString& DescriptionIn, UObjectiveState* ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn,
+	UObjective* SuccessObjectiveIn, UObjective* FailureObjectiveIn)
+{
+	UObjective * NewObjective = NewObject<UObjective>();
+	NewObjective->Setup(this->GetWorldID(), TitleIn, DescriptionIn, ObjectiveStateIn, ObjectiveTimeIn);
+	NewObjective->SetSuccessAndFailureObjectives(SuccessObjectiveIn, FailureObjectiveIn);
+	return NewObjective;
 }
 
 void UDataManager::RemoveObjective(const int32 WorldIDIn)
 {
-	for (int32 i = 0; i < RunningObjectives.Num(); i++)
+	if (this->Objectives.Contains(WorldIDIn))
 	{
-		if (UObjective * CachedObjective = RunningObjectives[i]; CachedObjective->WorldID == WorldIDIn)
+		this->Objectives[WorldIDIn]->Scheduled = false;
+		this->Objectives.Remove(WorldIDIn);
+		this->NoTimerObjectives.Remove(WorldIDIn);		
+		
+		if (this->PendingObjectives.Remove(WorldIDIn) > 0)
 		{
-			CachedObjective->Added = false;
-			RunningObjectives.RemoveAt(i);
-            
-			if (i == 0)
-			{//We removed from the first position update the timer!
-				this->UpdateRunningTimerUntilNextObjective();
-			}
-			return;
+			this->UpdatePendingTimerUntilNextObjective();
 		}
-	}
 
-	for (int32 i = 0; i < NoTimerObjectives.Num(); i++)
-	{
-		if (UObjective * CachedObjective = NoTimerObjectives[i]; CachedObjective->WorldID == WorldIDIn)
+		if (this->RunningObjectives.Remove(WorldIDIn) > 0)
 		{
-			CachedObjective->Added = false;
-			NoTimerObjectives.RemoveAt(i);
-			return;
-		}
+			this->UpdateRunningTimerUntilNextObjective();
+		}		
 	}
 }
 
@@ -73,55 +99,14 @@ void UDataManager::UpdateObjectiveState(const int32 WorldIDIn, UObjectiveState *
 {
 	if (ObjectiveStateIn)
 	{
-		for (int32 i = 0; i < this->RunningObjectives.Num(); i++)
+		TArray<int32> Keys;
+		this->Objectives.GetKeys(Keys);
+
+		for (const int32 Key : Keys)
 		{
-			if (const UObjective * Objective = this->RunningObjectives[i]; Objective->WorldID == WorldIDIn)
+			if (Key == WorldIDIn)
 			{
-				Objective->UpdateObjectiveState(ObjectiveStateIn);
-
-				switch (this->EvaluateObjective(Objective))
-				{
-					case EObjectiveState::Failed:
-						
-						this->CallObjectiveFailedDelegate(Objective);
-						this->RemoveObjective(Objective->WorldID);
-
-						if (Objective->FailureObjective)
-						{
-							this->AddObjective(Objective->FailureObjective);
-						}
-
-						this->UpdateRunningTimerUntilNextObjective();
-						
-						break;
-					case EObjectiveState::Completed:
-
-						this->CallObjectiveCompleteDelegate(Objective);
-						this->RemoveObjective(Objective->WorldID);
-						
-						if (Objective->SuccessObjective)
-						{
-							this->AddObjective(Objective->SuccessObjective);
-						}
-					
-						this->UpdateRunningTimerUntilNextObjective();
-					
-						break;
-					default:
-						break;
-				}
-				
-				return;
-			}
-		}//Running Objectives
-
-		for (int32 i = 0; i < this->NoTimerObjectives.Num(); i++)
-		{
-			if (UObjective * Objective = this->NoTimerObjectives[i]; Objective->WorldID == WorldIDIn)
-			{
-				Objective->UpdateObjectiveState(ObjectiveStateIn);
-
-				switch (this->EvaluateObjective(Objective))
+				switch (const UObjective * Objective = this->Objectives[Key]; this->EvaluateObjective(Objective))
 				{
 				case EObjectiveState::Failed:
 						
@@ -132,6 +117,8 @@ void UDataManager::UpdateObjectiveState(const int32 WorldIDIn, UObjectiveState *
 					{
 						this->AddObjective(Objective->FailureObjective);
 					}
+
+					this->UpdateRunningTimerUntilNextObjective();
 						
 					break;
 				case EObjectiveState::Completed:
@@ -144,14 +131,15 @@ void UDataManager::UpdateObjectiveState(const int32 WorldIDIn, UObjectiveState *
 						this->AddObjective(Objective->SuccessObjective);
 					}
 					
+					this->UpdateRunningTimerUntilNextObjective();
+					
 					break;
 				default:
 					break;
-				}
-				
-				return;
+				}//Switch
+				break;
 			}
-		}//NoTimer Objectives
+		}
 	}
 }
 
@@ -160,9 +148,9 @@ int64 UDataManager::GetCurrentGameSeconds() const
 	return this->CurrentGameTime;
 }
 
-int64 UDataManager::GameMinutesToGameSeconds(const int64 GameMinutes) const
+int64 UDataManager::RealWorldSecondsToGameSeconds(const int64 RealWorldSeconds) const
 {
-	return FMath::Max(0, GameMinutes * 60);
+	return RealWorldSeconds * this->GameTimeMultiplier;
 }
 
 int64 UDataManager::RealWorldMinutesToGameSeconds(const int64 RealWorldMinutes) const
@@ -170,20 +158,9 @@ int64 UDataManager::RealWorldMinutesToGameSeconds(const int64 RealWorldMinutes) 
 	return FMath::Max(0, RealWorldMinutes * 60 * this->GameTimeMultiplier);
 }
 
-int64 UDataManager::GameHoursToGameSeconds(const int64 GameHours) const
-{
-	return FMath::Max(0, GameHours * 60 * 60);
-}
-
 int64 UDataManager::RealWorldHoursToGameSeconds(const int64 RealWorldHours) const
 {
 	return FMath::Max(0,RealWorldHours * 60 * 60 * this->GameTimeMultiplier);
-}
-
-int64 UDataManager::GameHoursAndMinutesToGameSeconds(const int64 GameHours, const int64 GameMinutes) const
-{
-	const int64 Seconds = (GameHours * 60 * 60) + (GameMinutes * 60);
-	return FMath::Max(0, Seconds);
 }
 
 int64 UDataManager::RealWorldHoursAndMinutesToGameSeconds(const int64 RealWorldHours, const int64 RealWorldMinutes) const
@@ -198,7 +175,7 @@ int64 UDataManager::GameDateToGameSeconds(const FDateTime& GameDate) const
 	return DateSeconds;
 }
 
-FDateTime UDataManager::GameSecondsToGameDateTime(const int64 GameSeconds) const
+FDateTime UDataManager::GameSecondsToGameDate(const int64 GameSeconds) const
 {
 	const FDateTime Date = FDateTime( this->GameAnchorDate.ToUnixTimestamp() + GameSeconds );
 	return Date;
@@ -213,12 +190,12 @@ FDateTime UDataManager::GetCurrentGameDate() const
 
 FDateTime UDataManager::GetObjectiveStartDate(const FObjectiveTime& ObjectiveTime) const
 {
-	return FDateTime::FromUnixTimestamp(ObjectiveTime.StartTime);
+	return this->GameSecondsToGameDate(ObjectiveTime.StartTime);
 }
 
 FDateTime UDataManager::GetObjectiveEndDate(const FObjectiveTime& ObjectiveTime) const
 {
-	return FDateTime::FromUnixTimestamp(ObjectiveTime.EndTime);
+	return this->GameSecondsToGameDate(ObjectiveTime.EndTime);
 }
 
 FObjectiveTime UDataManager::CreateDelayedObjectiveTime(const ETimeAnchor TimeAnchor, const int64 DelayInSeconds, const int64 DurationInSeconds)
@@ -269,9 +246,9 @@ FDataManagerSaveState UDataManager::GetSaveState()
 	
 	SaveState.WorldID = this->WorldID;
 	SaveState.CurrentGameTime = this->CurrentGameTime;
-	SaveState.Objectives = this->SerializeObjectiveSaveGraph();
+	SaveState.Objectives = UObjectiveGraphSupport::GetObjectiveSaveGraphFromObjectiveGraph(this->Objectives);
 
-	this->LogSparseObjectiveGraph();
+	this->LogVerboseObjectiveGraph();
 	this->LogSparseObjectiveLists();
 	
 	return SaveState;
@@ -298,7 +275,7 @@ void UDataManager::RestoreSaveState(const FDataManagerSaveState& SaveState)
 		UObjective * Objective = UObjective::Make(*SaveState.Objectives.Find(ObjectiveSaveKey));
 		ObjectiveMap.Add(ObjectiveSaveKey,Objective);
 		
-		if (Objective->Added)
+		if (Objective->Scheduled)
 		{//Any Objectives that should be in the lists should be added to them now!
 			this->AddObjective(Objective);
 		}
@@ -338,7 +315,7 @@ void UDataManager::RestoreSaveState(const FDataManagerSaveState& SaveState)
 		}
 	}
 
-	this->LogSparseObjectiveGraph();
+	this->LogVerboseObjectiveGraph();
 	this->LogSparseObjectiveLists();
 }
 
@@ -369,73 +346,10 @@ void UDataManager::TestLoad()
 	UE_LOG(LogTemp, Display, TEXT("[Done Loading]"));
 }
 
-TMap<int32, UObjective*> UDataManager::SerializeObjectiveGraph()
-{	
-	//Gather Listed Objectives
-	TArray<UObjective*> Objectives;
-	Objectives.Append(this->PendingObjectives);
-	Objectives.Append(this->RunningObjectives);
-	Objectives.Append(this->NoTimerObjectives);
-
-	this->SerializedObjectiveMap.Empty(Objectives.Num());
-
-	for (UObjective * Objective : Objectives)
-	{
-		this->SerializeObjectiveSubGraph(Objective);
-	}
-	
-	return this->SerializedObjectiveMap;
-}
-
-void UDataManager::SerializeObjectiveSubGraph(UObjective* Objective)
-{
-	//Add Root Objective if it isn't present in the TMap
-	if (!this->SerializedObjectiveMap.Contains(Objective->WorldID))
-	{
-		this->SerializedObjectiveMap.Add(Objective->WorldID, Objective);
-	}
-
-	//Check Children, Only Recurse on them if they are not present in the SerializationMap
-	if (Objective->SuccessObjective)
-	{
-		if (!this->SerializedObjectiveMap.Contains(Objective->SuccessObjective->WorldID))
-		{
-			this->SerializeObjectiveSubGraph(Objective->SuccessObjective);
-		}
-	}
-
-	if (Objective->FailureObjective)
-	{
-		if (!this->SerializedObjectiveMap.Contains(Objective->FailureObjective->WorldID))
-		{
-			this->SerializeObjectiveSubGraph(Objective->FailureObjective);
-		}
-	}
-}
-
-TMap<int32, FObjectiveSave> UDataManager::SerializeObjectiveSaveGraph()
-{
-	TMap<int32, FObjectiveSave> ObjectiveSaves;
-	
-	const TMap<int32, UObjective*> Objectives = this->SerializeObjectiveGraph();
-
-	TArray<int32> Keys;
-	Objectives.GetKeys(Keys);
-
-	for (int32 Key : Keys)
-	{
-		ObjectiveSaves.Add(Key, (*Objectives.Find(Key))->GetSaveState());
-	}
-	
-	return ObjectiveSaves;	
-}
-
 void UDataManager::LogVerboseObjectiveGraph()
 {
-	const TMap<int32, UObjective*> Objectives = this->SerializeObjectiveGraph();
-
 	TArray<int32> Keys;
-	Objectives.GetKeys(Keys);
+	this->Objectives.GetKeys(Keys);
 
 	for (const int32 Key : Keys)
 	{
@@ -445,10 +359,8 @@ void UDataManager::LogVerboseObjectiveGraph()
 
 void UDataManager::LogSparseObjectiveGraph()
 {
-	const TMap<int32, UObjective*> Objectives = this->SerializeObjectiveGraph();
-
 	TArray<int32> Keys;
-	Objectives.GetKeys(Keys);
+	this->Objectives.GetKeys(Keys);
 
 	for (const int32 Key : Keys)
 	{
@@ -460,27 +372,27 @@ void UDataManager::LogVerboseObjectiveLists()
 {
 	UE_LOG(LogTemp, Display, TEXT("[Start Pending Objective List]"));
 
-	for (const UObjective * Objective : this->PendingObjectives)
+	for (const int32 Key : this->PendingObjectives)
 	{
-		Objective->LogVerbose();
+		this->Objectives[Key]->LogVerbose();
 	}
 	
 	UE_LOG(LogTemp, Display, TEXT("[End Pending Objective List]"));
 	
 	UE_LOG(LogTemp, Display, TEXT("[Start Running Objective List]"));
 
-	for (const UObjective * Objective : this->RunningObjectives)
+	for (const int32 Key : this->RunningObjectives)
 	{
-		Objective->LogVerbose();
+		this->Objectives[Key]->LogVerbose();
 	}
 	
 	UE_LOG(LogTemp, Display, TEXT("[End Running Objective List]"));
 
 	UE_LOG(LogTemp, Display, TEXT("[Start NoTimer Objective List]"));
 
-	for (const UObjective * Objective : this->NoTimerObjectives)
+	for (const int32 Key : this->NoTimerObjectives)
 	{
-		Objective->LogVerbose();
+		this->Objectives[Key]->LogVerbose();
 	}
 	
 	UE_LOG(LogTemp, Display, TEXT("[End NoTimer Objective List]"));
@@ -490,51 +402,48 @@ void UDataManager::LogSparseObjectiveLists()
 {
 	UE_LOG(LogTemp, Display, TEXT("[Start Pending Objective List]"));
 
-	for (const UObjective * Objective : this->PendingObjectives)
+	for (const int32 Key : this->PendingObjectives)
 	{
-		Objective->LogSparse();
+		this->Objectives[Key]->LogSparse();
 	}
 	
 	UE_LOG(LogTemp, Display, TEXT("[End Pending Objective List]"));
 	
 	UE_LOG(LogTemp, Display, TEXT("[Start Running Objective List]"));
 
-	for (const UObjective * Objective : this->RunningObjectives)
+	for (const int32 Key : this->RunningObjectives)
 	{
-		Objective->LogSparse();
+		this->Objectives[Key]->LogSparse();
 	}
 	
 	UE_LOG(LogTemp, Display, TEXT("[End Running Objective List]"));
 
 	UE_LOG(LogTemp, Display, TEXT("[Start NoTimer Objective List]"));
 
-	for (const UObjective * Objective : this->NoTimerObjectives)
+	for (const int32 Key : this->NoTimerObjectives)
 	{
-		Objective->LogSparse();
+		this->Objectives[Key]->LogSparse();
 	}
 	
 	UE_LOG(LogTemp, Display, TEXT("[End NoTimer Objective List]"));
 }
 
-void UDataManager::AddObjectiveRunning(UObjective* NewObjective)
+void UDataManager::AddObjectiveRunning(const UObjective* NewObjective)
 {
-	if (NewObjective)
-	{//Set it so that it's in progress now!
-		NewObjective->SetInProgress();
-	}
+	NewObjective->SetInProgress();
 	
 	if (RunningObjectives.IsEmpty())
 	{
-		RunningObjectives.Add(NewObjective);
+		RunningObjectives.Add(NewObjective->WorldID);
 		this->UpdateRunningTimerUntilNextObjective();
 	}
 	else
 	{
 		for (int i = 0; i < RunningObjectives.Num(); i++)
 		{
-			if (RunningObjectives[i]->ObjectiveTime.EndTime > NewObjective->ObjectiveTime.EndTime)
+			if (this->Objectives[this->RunningObjectives[i]]->ObjectiveTime.EndTime > NewObjective->ObjectiveTime.EndTime)
 			{
-				RunningObjectives.Insert(NewObjective,i);
+				RunningObjectives.Insert(NewObjective->WorldID,i);
 
 				if (i == 0)
 				{//We inserted into the first position Update the Timer!
@@ -546,7 +455,7 @@ void UDataManager::AddObjectiveRunning(UObjective* NewObjective)
 	}//if
 }
 
-void UDataManager::AddObjectivePending(UObjective* NewObjective)
+void UDataManager::AddObjectivePending(const UObjective* NewObjective)
 {
 	if (NewObjective)
 	{
@@ -555,16 +464,16 @@ void UDataManager::AddObjectivePending(UObjective* NewObjective)
 	
 	if (PendingObjectives.IsEmpty())
 	{
-		PendingObjectives.Add(NewObjective);
+		PendingObjectives.Add(NewObjective->WorldID);
 		this->UpdatePendingTimerUntilNextObjective();
 	}
 	else
 	{
 		for (int i = 0; i < PendingObjectives.Num(); i++)
 		{
-			if (PendingObjectives[i]->ObjectiveTime.StartTime > NewObjective->ObjectiveTime.StartTime)
+			if (this->Objectives[this->PendingObjectives[i]]->ObjectiveTime.StartTime > NewObjective->ObjectiveTime.StartTime)
 			{
-				PendingObjectives.Insert(NewObjective,i);
+				PendingObjectives.Insert(NewObjective->WorldID,i);
 
 				if (i == 0)
 				{//We inserted into the first position Update the Timer!
@@ -576,16 +485,16 @@ void UDataManager::AddObjectivePending(UObjective* NewObjective)
 	}//if
 }
 
-void UDataManager::AddObjectiveNoTimer(UObjective * NewObjective)
+void UDataManager::AddObjectiveNoTimer(const UObjective * NewObjective)
 {
-	NoTimerObjectives.Add(NewObjective);
+	NoTimerObjectives.Add(NewObjective->WorldID);
 }
 
 void UDataManager::UpdateRunningTimerUntilNextObjective()
 {
 	if (!RunningObjectives.IsEmpty())
 	{//Update the set timer with whatever is in the 0th position
-		const float Rate = static_cast<float>(FMath::Min(RunningObjectives[0]->ObjectiveTime.EndTime - FDateTime::UtcNow().ToUnixTimestamp(), 0));
+		const float Rate = static_cast<float>(FMath::Min(this->Objectives[this->RunningObjectives[0]]->ObjectiveTime.EndTime - FDateTime::UtcNow().ToUnixTimestamp(), 0));
 		GetWorld()->GetTimerManager().SetTimer(this->RunningObjectiveTimerHandle, this, &UDataManager::ObjectiveRunningTimerComplete, Rate, false);
 	}
 	else
@@ -598,7 +507,8 @@ void UDataManager::UpdatePendingTimerUntilNextObjective()
 {
 	if (PendingObjectives.Num() > 0)
 	{//Update the set timer with whatever is in the 0th position
-		const float Rate = static_cast<float>(FMath::Min(PendingObjectives[0]->ObjectiveTime.StartTime - FDateTime::UtcNow().ToUnixTimestamp(),0));
+		//Need to evaluate times better!!!
+		const float Rate = static_cast<float>(FMath::Min(this->Objectives[this->PendingObjectives[0]]->ObjectiveTime.StartTime - FDateTime::UtcNow().ToUnixTimestamp(),0));
 		GetWorld()->GetTimerManager().SetTimer(this->PendingObjectiveTimerHandle, this, &UDataManager::ObjectivePendingTimerComplete, Rate, false);
 	}
 	else
@@ -611,20 +521,17 @@ void UDataManager::ObjectiveRunningTimerComplete()
 {
 	if (!this->RunningObjectives.IsEmpty())
 	{
-		UObjective * Objective = this->RunningObjectives[0];
-		this->RunningObjectives.RemoveAt(0);
-		this->CallObjectiveTimerExpiredDelegate(Objective);
+		const UObjective * Objective = this->Objectives[this->RunningObjectives[0]];
 
 		//Add the Failure Objective IF it exists to the list of running objectives
 		if (Objective->FailureObjective)
 		{
 			this->AddObjective(Objective->FailureObjective);
 		}
-		
-		if (this->RunningObjectives.IsEmpty())
-		{//Nothing Left to process
-			this->GetWorld()->GetTimerManager().ClearTimer(this->RunningObjectiveTimerHandle);	
-		}
+
+		this->RunningObjectives.RemoveAt(0);
+		this->CallObjectiveTimerExpiredDelegate(Objective);
+		this->UpdateRunningTimerUntilNextObjective();
 	}	
 }
 
@@ -632,7 +539,7 @@ void UDataManager::ObjectivePendingTimerComplete()
 {
 	if (!this->PendingObjectives.IsEmpty())
 	{
-		UObjective * Objective = this->PendingObjectives[0];
+		const UObjective * Objective = this->Objectives[this->PendingObjectives[0]];
 
 		if (Objective->ObjectiveTime.NoTimer)
 		{
@@ -642,14 +549,10 @@ void UDataManager::ObjectivePendingTimerComplete()
 		{
 			this->AddObjectiveRunning(Objective);
 		}
-		
+
 		this->PendingObjectives.RemoveAt(0);
 		this->CallObjectiveTimerStartedDelegate(Objective);
-
-		if (this->PendingObjectives.IsEmpty())
-		{
-			this->GetWorld()->GetTimerManager().ClearTimer(this->PendingObjectiveTimerHandle);
-		}
+		this->UpdatePendingTimerUntilNextObjective();
 	}
 }
 
@@ -706,9 +609,9 @@ int64 UDataManager::ComputeTimeAnchor(const ETimeAnchor TimeAnchor)
 	}
 	else
 	{
-		if (this->TimeMap.Contains(TimeAnchor))
+		if (this->TimeAnchorMap.Contains(TimeAnchor))
 		{
-			SetTimeAnchor = *this->TimeMap.Find(TimeAnchor);
+			SetTimeAnchor = *this->TimeAnchorMap.Find(TimeAnchor);
 		}
 		else
 		{

@@ -5,32 +5,25 @@
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveLooseSubObjective/ObjectiveLooseSubObjectiveState.h"
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveStrictSubObjective/ObjectiveStrictSubObjectiveState.h"
 
-UObjectiveBasicState * UObjectiveSupport::CreateBasicState()
-{
-	UObjectiveBasicState * BasicState = NewObject<UObjectiveBasicState>();
-	return BasicState;
-}
-
-UObjective* UObjectiveSupport::SetSuccessObjective(UObjective* Objective, UObjective* SuccessObjective)
+UObjective * UObjectiveSupport::SetSuccessObjective(UObjective* Objective, UObjective* SuccessObjective)
 {
 	Objective->SetSuccessObjective(SuccessObjective);
 	return Objective;
 }
 
-UObjective* UObjectiveSupport::SetFailureObjective(UObjective* Objective, UObjective* FailureObjective)
+UObjective * UObjectiveSupport::SetFailureObjective(UObjective* Objective, UObjective* FailureObjective)
 {
 	Objective->SetFailureObjective(FailureObjective);
 	return Objective;
 }
 
-UObjective* UObjectiveSupport::SetMarker(UObjective* Objective, AActor* Marker)
+UObjective * UObjectiveSupport::SetMarker(UObjective* Objective, AActor* Marker)
 {
 	Objective->SetObjectiveMarker(Marker);
 	return Objective;
 }
 
-UObjective* UObjectiveSupport::SetSuccessAndFailureObjectives(UObjective* Objective, UObjective* SuccessObjective,
-	UObjective* FailureObjective)
+UObjective * UObjectiveSupport::SetSuccessAndFailureObjectives(UObjective* Objective, UObjective* SuccessObjective, UObjective* FailureObjective)
 {
 	Objective->SetSuccessObjective(SuccessObjective);
 	Objective->SetFailureObjective(FailureObjective);
@@ -43,6 +36,12 @@ UObjectiveLooseSubObjectiveState * UObjectiveSupport::CreateLooseSubObjectiveSta
 	LooseSubObjectiveState->SetSubObjectiveState_Implementation(SubObjectives, CompletionThreshold);
 	
 	return LooseSubObjectiveState;
+}
+
+UObjectiveBasicState * UObjectiveSupport::CreateBasicState()
+{
+	UObjectiveBasicState * BasicState = NewObject<UObjectiveBasicState>();
+	return BasicState;
 }
 
 UObjectiveStrictSubObjectiveState * UObjectiveSupport::CreateStrictSubObjectiveState(const TArray<FSubObjective>& SubObjectives)

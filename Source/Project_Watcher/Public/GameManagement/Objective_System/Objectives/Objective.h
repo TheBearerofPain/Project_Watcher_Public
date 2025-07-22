@@ -9,6 +9,7 @@
 
 /**
  * Time Data about the Source UObjective
+ * All time is in Game Seconds
  */
 USTRUCT(BlueprintType)
 struct PROJECT_WATCHER_API FObjectiveTime
@@ -27,37 +28,70 @@ struct PROJECT_WATCHER_API FObjectiveTime
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool NoTimer = false;
 
+	/* Used for schedule time evaluation */
+	
+	/* If True the Start & End times get evaluated during scheduling */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool EvaluateAtScheduleTime = false;
+
+	/* Offset for Start time during scheduling */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int64 ScheduleStartTimeOffset = 0;
+
+	/* Offset for end time during scheduling */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int64 ScheduleDuration = 0;
+
+	/* Used for schedule time evaluation */
+
 	/**
-	 * Default Constructor
+	 * Setup for NoTimer ObjectiveTime
+	 * @param StartTimeIn Objective Start Time
 	 */
-	FObjectiveTime()
+	void SetupForImmediateEvaluation(const int64 StartTimeIn)
 	{
-		StartTime = -1;
-		EndTime = -1;
-		NoTimer = false;
+		this->StartTime = StartTimeIn;
+		this->EndTime = -1;
+		this->NoTimer = true;
+		this->EvaluateAtScheduleTime = false;
 	}
 
 	/**
-	 * NoTimer Constructor
-	 * @param StartTimeIn StartTime
+	 * Setup for a time limited Objective
+	 * @param StartTimeIn Objective Start Time
+	 * @param EndTimeIn Objective End Time
 	 */
-	FObjectiveTime(const int64 StartTimeIn)
+	void SetupForImmediateEvaluation(const int64 StartTimeIn, const int64 EndTimeIn)
 	{
-		StartTime = StartTimeIn;
-		EndTime = -1;
-		NoTimer = true;
+		this->StartTime = StartTimeIn;
+		this->EndTime = EndTimeIn;
+		this->NoTimer = false;
+		this->EvaluateAtScheduleTime = false;
 	}
 
 	/**
-	 * Normal Constructor
-	 * @param StartTimeIn StartTime 
-	 * @param EndTimeIn EndTime
+	 * Setup for an Objective time that will be based on the game time when this objective is getting scheduled
+	 * @param ScheduleStartTimeOffsetIn How long do we wait after current game time until this objective is running
+	 * @param ScheduleDurationIn How long this objective will run for
 	 */
-	FObjectiveTime(const int64 StartTimeIn, const int64 EndTimeIn)
+	void SetupForScheduledEvaluation(const int64 ScheduleStartTimeOffsetIn, const int64 ScheduleDurationIn)
 	{
-		StartTime = StartTimeIn;
-		EndTime = EndTimeIn;
-		NoTimer = false;
+		this->ScheduleStartTimeOffset = ScheduleStartTimeOffsetIn;
+		this->ScheduleDuration = ScheduleDurationIn;
+		this->NoTimer = false;
+		this->EvaluateAtScheduleTime = true;
+	}
+
+	/**
+	 * Setup for a NoTimer Objective, that will be based on game time when this objective is getting scheduled
+	 * @param ScheduleStartTimeOffsetIn How long do we wait after current game time until this objective is running
+	 */
+	void SetupForScheduledEvaluation(const int64 ScheduleStartTimeOffsetIn)
+	{
+		this->ScheduleStartTimeOffset = ScheduleStartTimeOffsetIn;
+		this->ScheduleDuration = -1;
+		this->NoTimer = true;
+		this->EvaluateAtScheduleTime = true;
 	}
 };
 
@@ -189,8 +223,8 @@ public:
 	/* This is used as a temp var store when reinitializing from a SaveState & NOTHING ELSE */
 	int32 FailureObjectiveWorldID = -1;
 
-	/* Flag for if the Objective was added into DataManager, otherwise it existed only as a reference somewhere in the objective graph */
-	bool Added = false;
+	/* Flag for if the Objective was scheduled in the DataManager, otherwise it existed only as a reference somewhere in the objective graph */
+	bool Scheduled = false;
 	
 public:
 	/**

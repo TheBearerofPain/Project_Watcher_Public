@@ -11,7 +11,7 @@ UObjective* UObjective::Make(const FObjectiveSave& Save)
 
 void UObjective::LogVerbose() const
 {
-	FString LogString = "[Start Objective: " + FString::FromInt(this->WorldID) + "]\n";
+	FString LogString = "[Start Objective WorldID: " + FString::FromInt(this->WorldID) + "]\n";
 	LogString += "ObjectName: " + this->GetName() + " ClassName: " + this->GetClass()->GetName() + "\n";
 	LogString += "Title: " + this->Title + "\n";
 	LogString += "Description: " + this->Description + "\n";
@@ -21,15 +21,15 @@ void UObjective::LogVerbose() const
 	LogString += "ObjectiveState ObjectName: " + this->ObjectiveState->GetName() + " ObjectiveState ClassName: " + this->ObjectiveState->GetClass()->GetName() + "\n";
 	LogString += "SuccessObjective WID: " + FString::FromInt(this->SuccessObjectiveWorldID) + "\n";
 	LogString += "FailureObjective WID: " + FString::FromInt(this->FailureObjectiveWorldID) + "\n";
-	LogString += this->Added ? "Added: True\n" : "Added: False\n";
-	LogString += "[End Objective: " + FString::FromInt(this->WorldID) + "]\n";
+	LogString += this->Scheduled ? "Added: True\n" : "Added: False\n";
+	LogString += "[End Objective WorldID: " + FString::FromInt(this->WorldID) + "]\n";
 
 	UE_LOG(LogTemp, Display, TEXT("%s"), *LogString);
 }
 
 void UObjective::LogSparse() const
 {
-	const FString LogString = "[Objective: " + FString::FromInt(this->WorldID) + "]";
+	const FString LogString = "[Objective WorldID: " + FString::FromInt(this->WorldID) + "]";
 	UE_LOG(LogTemp, Display, TEXT("%s"), *LogString);
 }
 
@@ -99,7 +99,7 @@ FObjectiveSave UObjective::GetSaveState()
 	SaveState.ObjectiveState = this->ObjectiveState;
 	SaveState.SuccessObjectiveWorldID = (this->SuccessObjective) ? this->SuccessObjective->WorldID : -1;
 	SaveState.FailureObjectiveWorldID = (this->FailureObjective) ? this->FailureObjective->WorldID : -1;
-	SaveState.Added	= this->Added;
+	SaveState.Added	= this->Scheduled;
 	
 	return SaveState;
 }
@@ -113,7 +113,7 @@ void UObjective::RestoreSaveState(const FObjectiveSave& SaveState)
 	this->ObjectiveState = SaveState.ObjectiveState;	
 	this->SuccessObjectiveWorldID = SaveState.SuccessObjectiveWorldID;
 	this->FailureObjectiveWorldID = SaveState.FailureObjectiveWorldID;
-	this->Added = SaveState.Added;
+	this->Scheduled = SaveState.Added;
 }
 
 FObjectiveData UObjective::GetObjectiveData() const
