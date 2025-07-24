@@ -42,12 +42,12 @@ public:
 	TMap<int32, UObjective*> SerializeObjectiveList(const TArray<UObjective*>& Objectives);
 
 	/**
-	 * Converts an Objective Graph into an ObjectiveSaveGraph
-	 * @param ObjectiveGraph ObjectiveGraph
-	 * @return ObjectiveSaveGraph
+	 * Serializes an Objective then returns the resulting graph formed from ObjectiveData
+	 * @param Objective Source Objective
+	 * @return Deep Copy of Objective Graph
 	 */
-	static TMap<int32, FObjectiveSave> GetObjectiveSaveGraphFromObjectiveGraph(const TMap<int32, UObjective*>& ObjectiveGraph);
-
+	TMap<int32, FObjectiveData> GetObjectiveDataGraphFromObjective(UObjective * Objective);
+	
 private:
 	
 	/**

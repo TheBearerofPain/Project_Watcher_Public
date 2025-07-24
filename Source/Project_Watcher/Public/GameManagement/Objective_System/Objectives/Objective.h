@@ -96,87 +96,95 @@ struct PROJECT_WATCHER_API FObjectiveTime
 };
 
 /**
- * Special Save State Struct for UObjectives
- */
-USTRUCT()
-struct PROJECT_WATCHER_API FObjectiveSave
-{
-	GENERATED_BODY()
-
-	/* WorldID of Objective */
-	UPROPERTY(SaveGame)
-	int32 WorldID = -1;
-
-	/* Title of Objective */
-	UPROPERTY(SaveGame)
-	FString Title = TEXT("");
-
-	/* Description of Objective */
-	UPROPERTY(SaveGame)
-	FString Description = TEXT("");
-
-	/* ObjectiveTime of Objective */
-	UPROPERTY(SaveGame)
-	FObjectiveTime ObjectiveTime;
-
-	/* ObjectiveState of Objective */
-	UPROPERTY(SaveGame)
-	UObjectiveState * ObjectiveState = nullptr;
-
-	//AActor Marker
-	//For now Ignore because certain markers are attached to actors that need to be spawned first
-	//Since I don't know what is going to be spawned
-
-	/* WorldID of SuccessObjective for this Objective */
-	UPROPERTY(SaveGame)
-	int32 SuccessObjectiveWorldID = -1;
-
-	/* WorldID of FailureObjective for this Objective */
-	UPROPERTY(SaveGame)
-	int32 FailureObjectiveWorldID = -1;
-
-	/* Flag for if the Objective was added into DataManager, otherwise it existed only as a reference somewhere in the objective graph */
-	UPROPERTY(SaveGame)
-	bool Added = false;
-};
-
-/**
- * Data Struct for when we update the source UObjective
- * OR
- * Have updates regarding the source UObjective
+ * Objective Representation after serialization
  */
 USTRUCT(BlueprintType)
 struct PROJECT_WATCHER_API FObjectiveData
 {
 	GENERATED_BODY()
 
-	/* WorldID of the Objective, Read Only */
-	UPROPERTY(BlueprintType, BlueprintReadOnly)
+	/* WorldID of the Objective */
+	UPROPERTY(BlueprintType, BlueprintReadOnly, SaveGame)
 	int32 WorldID = -1;
 
+	/* Tag of the Objective */
+	UPROPERTY(BlueprintType, BlueprintReadOnly, SaveGame)
+	FString Tag = TEXT("");
+
 	/* Title of the Objective */
-	UPROPERTY(BlueprintType, BlueprintReadOnly)
+	UPROPERTY(BlueprintType, BlueprintReadOnly, SaveGame)
 	FString Title = TEXT("");
 
 	/* Description of the Objective */
-	UPROPERTY(BlueprintType, BlueprintReadOnly)
+	UPROPERTY(BlueprintType, BlueprintReadOnly, SaveGame)
 	FString Description = TEXT("");
 
 	/* ObjectiveTime, Read Only */
-	UPROPERTY(BlueprintType, BlueprintReadOnly)
+	UPROPERTY(BlueprintType, BlueprintReadOnly, SaveGame)
 	FObjectiveTime ObjectiveTime;
 	
 	/* ObjectiveState is a fresh Object not the source in order to prevent accidental tampering with the objective */
-	UPROPERTY(BlueprintType, BlueprintReadWrite)
+	UPROPERTY(BlueprintType, BlueprintReadWrite, SaveGame)
 	UObjectiveState * ObjectiveState = nullptr;
 
-	/* Original ObjectiveMarker associated with the Objective */
+	/* Original ObjectiveMarker associated with the Objective, Not included in save state */
 	UPROPERTY(BlueprintType, BlueprintReadOnly)
 	AActor * ObjectiveMarker = nullptr;
+
+	/* SuccessObjective WorldID */
+	UPROPERTY(SaveGame)
+	int32 SuccessObjectiveWorldID = -1;
+
+	/* FailureObjective WorldID */
+	UPROPERTY(SaveGame)
+	int32 FailureObjectiveWorldID = -1;
+
+	/* Whether this objective was scheduled or not */
+	UPROPERTY(SaveGame)
+	bool Scheduled = false;
+
+	/* Whether this Objective is running or not */
+	UPROPERTY(SaveGame)
+	bool Running = false;
+
+	/**
+	 * Logs sparse data about the objective
+	 */
+	void LogSparse() const;
+
+	/**
+	 * Logs verbose data about the objective
+	 */
+	void LogVerbose() const;
+
+	/**
+	 * Sets the ObjectiveState to Pending
+	 */
+	void SetPending();
+
+	/**
+	 * Sets the ObjectiveState to InProgress
+	 */
+	void SetInProgress();
+
+	/**
+	 * Evaluates the ObjectiveState
+	 * @return Evaluated ObjectiveState
+	 */
+	EObjectiveState Evaluate() const;
+
+	/**
+	 * Updates ObjectiveState by Making a partial deep copy of the given ObjectiveState,
+	 * We don't deep copy any SubObjective Markers
+	 * @param ObjectiveStateIn ObjectiveState
+	 */
+	void UpdateObjectiveState(UObjectiveState * ObjectiveStateIn) const;
+
+	FObjectiveData GetCopy() const;
 };
 
 /**
- * Objective
+ * Objective, Used to construct an objective graph
  */
 UCLASS(Blueprintable)
 class PROJECT_WATCHER_API UObjective : public UObject
@@ -188,6 +196,10 @@ public:
 	/* WorldID of this Objective */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
 	int32 WorldID = -1;
+
+	/* Tag for this objective that can be used to associate this Objective with external events */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
+	FString Tag = TEXT("");
 
 	/* Title of this Objective */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
@@ -213,36 +225,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
 	UObjective * SuccessObjective = nullptr;
 
-	/* This is used as a temp var store when reinitializing from a SaveState & NOTHING ELSE */
-	int32 SuccessObjectiveWorldID = -1;
-
 	/* FailureObjective, If set gets queued up if this Objective Fails */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective")
 	UObjective * FailureObjective = nullptr;
-
-	/* This is used as a temp var store when reinitializing from a SaveState & NOTHING ELSE */
-	int32 FailureObjectiveWorldID = -1;
-
-	/* Flag for if the Objective was scheduled in the DataManager, otherwise it existed only as a reference somewhere in the objective graph */
-	bool Scheduled = false;
 	
 public:
-	/**
-	 * Static Initializer for UObjective
-	 * @param Save The Data we use to Initialize the Objective
-	 * @return The Initialized Objective
-	 */
-	static UObjective * Make(const FObjectiveSave& Save);
-
-	/**
-	 * Logs Verbose information to Console about this Objective
-	 */
-	void LogVerbose() const;
-
-	/**
-	 * Logs Sparse information to Console about this Objective
-	 */
-	void LogSparse() const;
 
 	/**
 	 * Set the given data to this Objective
@@ -285,43 +272,14 @@ public:
 	void SetSuccessAndFailureObjectives(UObjective * SuccessObjectiveIn, UObjective * FailureObjectiveIn);
 
 	/**
-	 * Sets the ObjectiveState to Pending
+	 * Sets the Tag for this Objective
+	 * @param TagIn The Tag we are using for this Objective
 	 */
-	void SetPending() const;
-
-	/**
-	 * Sets the ObjectiveState to InProgress
-	 */
-	void SetInProgress() const;
-
-	/**
-	 * Evaluates the ObjectiveState
-	 * @return Evaluated ObjectiveState
-	 */
-	EObjectiveState Evaluate() const;
-
-	/**
-	 * Get the SaveState Struct for this Objective
-	 * @return SaveState
-	 */
-	FObjectiveSave GetSaveState();
-
-	/**
-	 * Restores the SaveState for this Objective
-	 * @param SaveState SaveState we are restoring from
-	 */
-	void RestoreSaveState(const FObjectiveSave& SaveState);
+	void SetTag(const FString& TagIn);
 
 	/**
 	 * Gets the ObjectiveData for this Objective
 	 * @return ObjectiveData for this Objective
 	 */
 	FObjectiveData GetObjectiveData() const;
-
-	/**
-	 * Updates ObjectiveState by Making a partial deep copy of the given ObjectiveState,
-	 * We don't deep copy any SubObjective Markers
-	 * @param ObjectiveStateIn ObjectiveState
-	 */
-	void UpdateObjectiveState(UObjectiveState * ObjectiveStateIn) const;
 };

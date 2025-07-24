@@ -2,17 +2,15 @@
 
 #include "GameManagement/Objective_System/Objectives/Objective.h"
 
-UObjective* UObjective::Make(const FObjectiveSave& Save)
+void FObjectiveData::LogSparse() const
 {
-	UObjective * Objective = NewObject<UObjective>();
-	Objective->RestoreSaveState(Save);
-	return Objective;
+	const FString LogString = "[Objective WorldID: " + FString::FromInt(this->WorldID) + "]";
+	UE_LOG(LogTemp, Display, TEXT("%s"), *LogString);
 }
 
-void UObjective::LogVerbose() const
+void FObjectiveData::LogVerbose() const
 {
 	FString LogString = "[Start Objective WorldID: " + FString::FromInt(this->WorldID) + "]\n";
-	LogString += "ObjectName: " + this->GetName() + " ClassName: " + this->GetClass()->GetName() + "\n";
 	LogString += "Title: " + this->Title + "\n";
 	LogString += "Description: " + this->Description + "\n";
 	LogString += "StartTime: " + FString::FromInt(this->ObjectiveTime.StartTime) + "\n";
@@ -21,16 +19,68 @@ void UObjective::LogVerbose() const
 	LogString += "ObjectiveState ObjectName: " + this->ObjectiveState->GetName() + " ObjectiveState ClassName: " + this->ObjectiveState->GetClass()->GetName() + "\n";
 	LogString += "SuccessObjective WID: " + FString::FromInt(this->SuccessObjectiveWorldID) + "\n";
 	LogString += "FailureObjective WID: " + FString::FromInt(this->FailureObjectiveWorldID) + "\n";
-	LogString += this->Scheduled ? "Added: True\n" : "Added: False\n";
+	LogString += this->Scheduled ? "Scheduled: True\n" : "Scheduled: False\n";
 	LogString += "[End Objective WorldID: " + FString::FromInt(this->WorldID) + "]\n";
-
 	UE_LOG(LogTemp, Display, TEXT("%s"), *LogString);
 }
 
-void UObjective::LogSparse() const
+void FObjectiveData::SetPending()
 {
-	const FString LogString = "[Objective WorldID: " + FString::FromInt(this->WorldID) + "]";
-	UE_LOG(LogTemp, Display, TEXT("%s"), *LogString);
+	this->ObjectiveState->SetPending();
+	this->Running = false;
+	this->Scheduled = true;
+}
+
+void FObjectiveData::SetInProgress()
+{
+	this->ObjectiveState->SetInProgress();
+	this->Running = true;
+	this->Scheduled = true;
+}
+
+/*void FObjectiveData::SetScheduled()
+{
+	this->Scheduled = true;
+}
+
+void FObjectiveData::SetNotScheduled()
+{
+	this->Scheduled = false;
+}*/
+
+EObjectiveState FObjectiveData::Evaluate() const
+{
+	EObjectiveState CurrentState = EObjectiveState::Pending;
+	
+	if (ObjectiveState)
+	{
+		CurrentState = ObjectiveState->Evaluate();
+	}
+	
+	return CurrentState;
+}
+
+void FObjectiveData::UpdateObjectiveState(UObjectiveState* ObjectiveStateIn) const
+{
+	this->ObjectiveState->UpdateFromCopy(ObjectiveStateIn);
+}
+
+FObjectiveData FObjectiveData::GetCopy() const
+{
+	FObjectiveData ObjectiveData = FObjectiveData();
+
+	ObjectiveData.WorldID = this->WorldID;
+	ObjectiveData.Tag = this->Tag;
+	ObjectiveData.Title = this->Title;
+	ObjectiveData.Description = this->Description;
+	ObjectiveData.ObjectiveTime = this->ObjectiveTime;
+	ObjectiveData.ObjectiveState = this->ObjectiveState->GetCopy();
+	ObjectiveData.ObjectiveMarker = this->ObjectiveMarker;
+	ObjectiveData.SuccessObjectiveWorldID = this->SuccessObjectiveWorldID;
+	ObjectiveData.FailureObjectiveWorldID = this->FailureObjectiveWorldID;
+	ObjectiveData.Scheduled = this->Scheduled;
+	
+	return ObjectiveData;
 }
 
 void UObjective::Setup(const int32 WorldIDIn, const FString& TitleIn, const FString& DescriptionIn,
@@ -51,13 +101,11 @@ void UObjective::SetObjectiveMarker(AActor* ObjectiveMarkerIn)
 void UObjective::SetSuccessObjective(UObjective * SuccessObjectiveIn)
 {
 	this->SuccessObjective = SuccessObjectiveIn;
-	this->SuccessObjectiveWorldID = SuccessObjectiveIn->WorldID;
 }
 
 void UObjective::SetFailureObjective(UObjective* FailureObjectiveIn)
 {
 	this->FailureObjective = FailureObjectiveIn;
-	this->FailureObjectiveWorldID = FailureObjectiveIn->WorldID;
 }
 
 void UObjective::SetSuccessAndFailureObjectives(UObjective* SuccessObjectiveIn, UObjective* FailureObjectiveIn)
@@ -66,54 +114,9 @@ void UObjective::SetSuccessAndFailureObjectives(UObjective* SuccessObjectiveIn, 
 	this->SetFailureObjective(FailureObjectiveIn);
 }
 
-void UObjective::SetPending() const
+void UObjective::SetTag(const FString& TagIn)
 {
-	this->ObjectiveState->SetPending();
-}
-
-void UObjective::SetInProgress() const
-{
-	this->ObjectiveState->SetInProgress();
-}
-
-EObjectiveState UObjective::Evaluate() const
-{
-	EObjectiveState CurrentState = EObjectiveState::Pending;
-	
-	if (ObjectiveState)
-	{
-		CurrentState = ObjectiveState->Evaluate();
-	}
-	
-	return CurrentState;
-}
-
-FObjectiveSave UObjective::GetSaveState()
-{
-	FObjectiveSave SaveState = FObjectiveSave();
-
-	SaveState.WorldID = this->WorldID;
-	SaveState.Title = this->Title;
-	SaveState.Description = this->Description;
-	SaveState.ObjectiveTime = this->ObjectiveTime;
-	SaveState.ObjectiveState = this->ObjectiveState;
-	SaveState.SuccessObjectiveWorldID = (this->SuccessObjective) ? this->SuccessObjective->WorldID : -1;
-	SaveState.FailureObjectiveWorldID = (this->FailureObjective) ? this->FailureObjective->WorldID : -1;
-	SaveState.Added	= this->Scheduled;
-	
-	return SaveState;
-}
-
-void UObjective::RestoreSaveState(const FObjectiveSave& SaveState)
-{
-	this->WorldID = SaveState.WorldID;
-	this->Title = SaveState.Title;
-	this->Description = SaveState.Description;
-	this->ObjectiveTime = SaveState.ObjectiveTime;
-	this->ObjectiveState = SaveState.ObjectiveState;	
-	this->SuccessObjectiveWorldID = SaveState.SuccessObjectiveWorldID;
-	this->FailureObjectiveWorldID = SaveState.FailureObjectiveWorldID;
-	this->Scheduled = SaveState.Added;
+	this->Tag = TagIn;
 }
 
 FObjectiveData UObjective::GetObjectiveData() const
@@ -121,15 +124,21 @@ FObjectiveData UObjective::GetObjectiveData() const
 	FObjectiveData ObjectiveData = FObjectiveData();
 
 	ObjectiveData.WorldID = this->WorldID;
+	ObjectiveData.Tag = this->Tag;
 	ObjectiveData.Title = this->Title;
 	ObjectiveData.Description = this->Description;
 	ObjectiveData.ObjectiveTime = this->ObjectiveTime;
 	ObjectiveData.ObjectiveState = this->ObjectiveState->GetCopy();
 	
-	return ObjectiveData;
-}
+	if (this->SuccessObjective)
+	{
+		ObjectiveData.SuccessObjectiveWorldID = this->SuccessObjective->WorldID;
+	}
 
-void UObjective::UpdateObjectiveState(UObjectiveState * ObjectiveStateIn) const
-{
-	this->ObjectiveState->UpdateFromCopy(ObjectiveStateIn);
+	if (this->FailureObjective)
+	{
+		ObjectiveData.FailureObjectiveWorldID = this->FailureObjective->WorldID;
+	}
+	
+	return ObjectiveData;
 }

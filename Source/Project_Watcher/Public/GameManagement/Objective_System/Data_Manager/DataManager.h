@@ -21,7 +21,7 @@ struct PROJECT_WATCHER_API FDataManagerSaveState
 	int64 CurrentGameTime = -1;
 	
 	UPROPERTY(SaveGame)
-	TMap<int32, FObjectiveSave> Objectives;
+	TMap<int32, FObjectiveData> Objectives;
 };
 
 //@TODO figure out how to do seasons in a nice configurable way
@@ -74,7 +74,7 @@ private:
 
 	/* ObjectiveMap */
 	UPROPERTY()
-	TMap<int32, UObjective*> Objectives;
+	TMap<int32, FObjectiveData> Objectives;
 
 	//Objective Timer Handle for when the next soonest objective expires
 	FTimerHandle RunningObjectiveTimerHandle;
@@ -146,59 +146,59 @@ public:
 
 	/**
 	 * Creates an Objective
-	 * @param TitleIn Title
-	 * @param DescriptionIn Description
-	 * @param ObjectiveStateIn Objective State , How the Objective will be evaluated
-	 * @param ObjectiveTimeIn Objective Time
+	 * @param Title Title
+	 * @param Description Description
+	 * @param ObjectiveState Objective State , How the Objective will be evaluated
+	 * @param ObjectiveTime Objective Time
 	 * @return Initialized Objective
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective")
-	UObjective * CreateObjective(const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn);
+	UObjective * CreateObjective(const FString& Title, const FString& Description, UObjectiveState * ObjectiveState, const FObjectiveTime& ObjectiveTime);
 
 	/**
 	 * Creates an Objective
-	 * @param TitleIn Title 
-	 * @param DescriptionIn Description
-	 * @param ObjectiveStateIn Objective State, How the Objective will be evaluated
-	 * @param ObjectiveTimeIn Objective Time
-	 * @param SuccessObjectiveIn SuccessObjective
+	 * @param Title Title 
+	 * @param Description Description
+	 * @param ObjectiveState Objective State, How the Objective will be evaluated
+	 * @param ObjectiveTime Objective Time
+	 * @param SuccessObjective SuccessObjective
 	 * @return Initialized Objective
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective")
-	UObjective * CreateObjectiveWithSuccessObjective(const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn, UObjective * SuccessObjectiveIn);
+	UObjective * CreateObjectiveWithSuccessObjective(const FString& Title, const FString& Description, UObjectiveState * ObjectiveState, const FObjectiveTime& ObjectiveTime, UObjective * SuccessObjective);
 
 	/**
 	 * Creates Objective
-	 * @param TitleIn Title
-	 * @param DescriptionIn Description 
-	 * @param ObjectiveStateIn Objective State, How the Objective will be evaluated
-	 * @param ObjectiveTimeIn Objective Time
-	 * @param FailureObjectiveIn FailureObjective
+	 * @param Title Title
+	 * @param Description Description 
+	 * @param ObjectiveState Objective State, How the Objective will be evaluated
+	 * @param ObjectiveTime Objective Time
+	 * @param FailureObjective FailureObjective
 	 * @return Initialized Objective
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective")
-	UObjective * CreateObjectiveWithFailureObjective(const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn, UObjective * FailureObjectiveIn);
+	UObjective * CreateObjectiveWithFailureObjective(const FString& Title, const FString& Description, UObjectiveState * ObjectiveState, const FObjectiveTime& ObjectiveTime, UObjective * FailureObjective);
 
 	/**
 	 * Creates Objective
-	 * @param TitleIn Title
-	 * @param DescriptionIn Description 
-	 * @param ObjectiveStateIn Objective State, How the Objective will be evaluated
-	 * @param ObjectiveTimeIn Objective Time
-	 * @param SuccessObjectiveIn SuccessObjective
-	 * @param FailureObjectiveIn FailureObjective
+	 * @param Title Title
+	 * @param Description Description 
+	 * @param ObjectiveState Objective State, How the Objective will be evaluated
+	 * @param ObjectiveTime Objective Time
+	 * @param SuccessObjective SuccessObjective
+	 * @param FailureObjective FailureObjective
 	 * @return Initialized Objective
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Objective")
-	UObjective * CreateObjectiveWithSuccessAndFailureObjectives(const FString& TitleIn, const FString& DescriptionIn, UObjectiveState * ObjectiveStateIn, const FObjectiveTime& ObjectiveTimeIn, UObjective * SuccessObjectiveIn, UObjective * FailureObjectiveIn);
+	UObjective * CreateObjectiveWithSuccessAndFailureObjectives(const FString& Title, const FString& Description, UObjectiveState * ObjectiveState, const FObjectiveTime& ObjectiveTime, UObjective * SuccessObjective, UObjective * FailureObjective);
 	
 	/**
 	 * Updates the Objective with the matching WID, with the given state, We ONLY search running objectives to update
-	 * @param WorldIDIn The World ID we are looking for
-	 * @param ObjectiveStateIn The State we are updating with
+	 * @param ObjectiveWorldID The World ID we are looking for
+	 * @param ObjectiveState The State we are updating with
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Objective")
-	void UpdateObjectiveState(const int32 WorldIDIn, UObjectiveState * ObjectiveStateIn);
+	void UpdateObjectiveState(const int32 ObjectiveWorldID, UObjectiveState * ObjectiveState);
 
 	//Objective State//
 
@@ -384,15 +384,27 @@ public:
 
 private:
 
-	// Removers //
+	// Internal //
+
+	/**
+	 * Schedules an Objective that was already introduced to the graph but was not scheduled
+	 * @param ObjectiveWorldID Objective we are scheduling
+	 */
+	void ScheduleObjective(const int32 ObjectiveWorldID);
+
+	/**
+	 * Schedules an Objective straight into the appropriate list with NO additional evaluations on state
+	 * @param ObjectiveWorldID Objective we are scheduling
+	 */
+	void ScheduleRawObjective(const int32 ObjectiveWorldID);
 
 	/**
 	 * Removes the given Objective from the Objective Lists
-	 * @param WorldIDIn Objective WorldID we are looking to remove
+	 * @param ObjectiveWorldID Objective WorldID we are looking to remove
 	 */
-	void RemoveObjective(const int32 WorldIDIn);
+	void RemoveObjective(const int32 ObjectiveWorldID);
 	
-	// Removers //
+	// Internal //
 	
 	// Save State //
 
@@ -414,21 +426,21 @@ private:
 	
 	/**
 	 * Adds an Objective to the RunningObjective List
-	 * @param NewObjective The Objective we are adding
+	 * @param ObjectiveWorldID The Objective we are adding
 	 */
-	void AddObjectiveRunning(const UObjective * NewObjective);
+	void AddObjectiveRunning(const int32 ObjectiveWorldID);
 
 	/**
 	 * Adds an Objective to the PendingObjective List
-	 * @param NewObjective The Objective we are adding
+	 * @param ObjectiveWorldID The Objective we are adding
 	 */
-	void AddObjectivePending(const UObjective * NewObjective);
+	void AddObjectivePending(const int32 ObjectiveWorldID);
 
 	/**
 	 * Adds an Objective to the NoTimerObjective List
-	 * @param NewObjective The Objective we are adding
+	 * @param ObjectiveWorldID The Objective we are adding
 	 */
-	void AddObjectiveNoTimer(const UObjective * NewObjective);
+	void AddObjectiveNoTimer(const int32 ObjectiveWorldID);
 	
 	/**
 	 * Sets the timer until the next objective IF any
@@ -461,34 +473,34 @@ private:
 
 	/**
 	 * Used to CallObjectiveCompleteDelegate
-	 * @param Objective The Objective we are broadcasting as completed
+	 * @param ObjectiveWorldID The Objective we are broadcasting as completed
 	 */
-	void CallObjectiveCompleteDelegate(const UObjective * Objective) const;
+	void CallObjectiveCompleteDelegate(const int32 ObjectiveWorldID) const;
 
 	/**
 	 * Used to CallObjectiveFailedDelegate
-	 * @param Objective The Objective we are broadcasting as failed
+	 * @param ObjectiveWorldID The Objective we are broadcasting as failed
 	 */
-	void CallObjectiveFailedDelegate(const UObjective * Objective) const;
+	void CallObjectiveFailedDelegate(const int32 ObjectiveWorldID) const;
 
 	/**
 	 * Used to CallObjectiveTimerExpiredDelegate
-	 * @param Objective The Objective we are broadcasting as expired
+	 * @param ObjectiveWorldID The Objective we are broadcasting as expired
 	 */
-	void CallObjectiveTimerExpiredDelegate(const UObjective * Objective) const;
+	void CallObjectiveTimerExpiredDelegate(const int32 ObjectiveWorldID) const;
 
 	/**
 	 * Used to CallObjectiveStartedDelegate
-	 * @param Objective The Objective we are broadcasting as started
+	 * @param ObjectiveWorldID The Objective we are broadcasting as started
 	 */
-	void CallObjectiveTimerStartedDelegate(const UObjective * Objective) const;
+	void CallObjectiveTimerStartedDelegate(const int32 ObjectiveWorldID) const;
 
 	/**
 	 * Evaluates an objectives completion state
-	 * @param Objective The objective we are evaluating
+	 * @param ObjectiveWorldID The objective we are evaluating
 	 * @return True if the objective is complete, False if the objective is NOT complete
 	 */
-	static EObjectiveState EvaluateObjective(const UObjective * Objective);
+	EObjectiveState EvaluateObjective(const int32 ObjectiveWorldID);
 
 	//Objective State//
 

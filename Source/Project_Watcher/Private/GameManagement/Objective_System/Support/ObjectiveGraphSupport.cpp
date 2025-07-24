@@ -28,19 +28,20 @@ TMap<int32, UObjective*> UObjectiveGraphSupport::SerializeObjectiveList(const TA
 	return this->ObjectiveGraph;
 }
 
-TMap<int32, FObjectiveSave> UObjectiveGraphSupport::GetObjectiveSaveGraphFromObjectiveGraph(const TMap<int32, UObjective*>& ObjectiveGraph)
+TMap<int32, FObjectiveData> UObjectiveGraphSupport::GetObjectiveDataGraphFromObjective(UObjective* Objective)
 {
-	TMap<int32, FObjectiveSave> ObjectiveSaves;
+	TMap<int32, FObjectiveData> ObjectiveDataGraph;
+	TMap<int32, UObjective*> SourceObjectiveGraph = this->SerializeObjective(Objective);
 
 	TArray<int32> Keys;
-	ObjectiveGraph.GetKeys(Keys);
+	SourceObjectiveGraph.GetKeys(Keys);
 
-	for (int32 Key : Keys)
+	for (const int32 Key : Keys)
 	{
-		ObjectiveSaves.Add(Key, (*ObjectiveGraph.Find(Key))->GetSaveState());
+		ObjectiveDataGraph.Add(Key,SourceObjectiveGraph[Key]->GetObjectiveData());
 	}
 	
-	return ObjectiveSaves;
+	return ObjectiveDataGraph;
 }
 
 void UObjectiveGraphSupport::SerializeGraph(UObjective * Objective)
