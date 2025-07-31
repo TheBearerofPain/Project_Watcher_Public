@@ -30,7 +30,7 @@ public:
 	
 	virtual TArray<FSubObjective> GetSubObjectiveState_Implementation() override;
 	
-	virtual void SetSubObjectiveState_Implementation(const TArray<FSubObjective>& SubObjectiveStateIn, const int32 CompletionThresholdIn) override;
+	virtual void SetSubObjectiveState_Implementation(const TArray<FSubObjective>& SubObjectiveListIn, const int32 CompletionThresholdIn) override;
 
 	virtual EObjectiveState Evaluate() override;
 };

@@ -5,11 +5,10 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "GameManagement/Objective_System/Objectives/Objective.h"
+#include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveBasic/ObjectiveBasicState.h"
+#include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveLooseSubObjective/ObjectiveLooseSubObjectiveState.h"
+#include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveStrictSubObjective/ObjectiveStrictSubObjectiveState.h"
 #include "ObjectiveSupport.generated.h"
-
-class UObjectiveStrictSubObjectiveState;
-class UObjectiveLooseSubObjectiveState;
-class UObjectiveBasicState;
 
 /**
  * A group of support functions for creating and managing objectives

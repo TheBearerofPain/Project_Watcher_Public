@@ -6,22 +6,34 @@ UObjectiveState* UObjectiveLooseSubObjectiveState::GetCopy()
 {
 	UObjectiveLooseSubObjectiveState * Copy = NewObject<UObjectiveLooseSubObjectiveState>();
 
+	if (!IsValid(Copy))
+	{
+		ensureMsgf(false, TEXT("UObjectiveLooseSubObjectiveState::GetCopy failed: object is Invalid"));
+		return nullptr;
+	}
+	
 	Copy->SubObjectiveList.Append(this->SubObjectiveList);
 	Copy->CompletionThreshold = this->CompletionThreshold;
-	
 	return Copy;
 }
 
 void UObjectiveLooseSubObjectiveState::UpdateFromCopy(UObjectiveState* ObjectiveStateIn)
 {
-	if (ObjectiveStateIn)
+	if (!IsValid(ObjectiveStateIn))
 	{
-		if (const UObjectiveLooseSubObjectiveState * Source = Cast<UObjectiveLooseSubObjectiveState>(ObjectiveStateIn))
-		{
-			this->SubObjectiveList.Empty();
-			this->SubObjectiveList.Append(Source->SubObjectiveList);
-			this->CompletionThreshold = Source->CompletionThreshold;
-		}
+		ensureMsgf(false, TEXT("UObjectiveLooseSubObjectiveState::UpdateFromCopy failed: ObjectiveStateIn is Invalid"));
+		return;
+	}
+	
+	if (const UObjectiveLooseSubObjectiveState * Source = Cast<UObjectiveLooseSubObjectiveState>(ObjectiveStateIn))
+	{
+		this->SubObjectiveList.Empty();
+		this->SubObjectiveList.Append(Source->SubObjectiveList);
+		this->CompletionThreshold = Source->CompletionThreshold;
+	}
+	else
+	{
+		ensureMsgf(false, TEXT("UObjectiveLooseSubObjectiveState::UpdateFromCopy failed: Cast to UObjectiveLooseSubObjectiveState failed"));
 	}
 }
 

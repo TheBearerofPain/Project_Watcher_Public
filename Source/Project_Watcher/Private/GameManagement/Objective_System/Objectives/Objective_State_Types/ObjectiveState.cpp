@@ -5,6 +5,12 @@
 UObjectiveState* UObjectiveState::GetCopy()
 {
 	UObjectiveState * Copy = NewObject<UObjectiveState>();
+
+	if (!IsValid(Copy))
+	{
+		ensureMsgf(false, TEXT("ObjectiveState::GetCopy failed: Object is Invalid"));
+		return nullptr;
+	}
 	return Copy;
 }
 

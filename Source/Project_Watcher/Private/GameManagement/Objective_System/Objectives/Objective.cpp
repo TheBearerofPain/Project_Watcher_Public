@@ -16,45 +16,65 @@ void FObjectiveData::LogVerbose() const
 	LogString += "StartTime: " + FString::FromInt(this->ObjectiveTime.StartTime) + "\n";
 	LogString += "EndTime: " + FString::FromInt(this->ObjectiveTime.EndTime) + "\n";
 	LogString += this->ObjectiveTime.NoTimer ? "NoTimer: True\n" : "NoTimer: False\n";
-	LogString += "ObjectiveState ObjectName: " + this->ObjectiveState->GetName() + " ObjectiveState ClassName: " + this->ObjectiveState->GetClass()->GetName() + "\n";
+	
+	if (IsValid(this->ObjectiveState))
+	{
+		LogString += "ObjectiveState ObjectName: " + this->ObjectiveState->GetName() + " ObjectiveState ClassName: " + this->ObjectiveState->GetClass()->GetName() + "\n";
+	}
+	else
+	{
+		ensureMsgf(false, TEXT("UObjective::LogVerbose failed: ObjectiveState is Invalid"));
+	}
+	
 	LogString += "SuccessObjective WID: " + FString::FromInt(this->SuccessObjectiveWorldID) + "\n";
 	LogString += "FailureObjective WID: " + FString::FromInt(this->FailureObjectiveWorldID) + "\n";
 	LogString += this->Scheduled ? "Scheduled: True\n" : "Scheduled: False\n";
 	LogString += "[End Objective WorldID: " + FString::FromInt(this->WorldID) + "]\n";
+	
 	UE_LOG(LogTemp, Display, TEXT("%s"), *LogString);
 }
 
 void FObjectiveData::SetPending()
 {
-	this->ObjectiveState->SetPending();
+	if (IsValid(this->ObjectiveState))
+	{
+		this->ObjectiveState->SetPending();
+	}
+	else
+	{
+		ensureMsgf(false, TEXT("UObjective::SetPending failed: ObjectiveState is Invalid"));
+	}
+	
 	this->Running = false;
 	this->Scheduled = true;
 }
 
 void FObjectiveData::SetInProgress()
 {
-	this->ObjectiveState->SetInProgress();
+	if (IsValid(this->ObjectiveState))
+	{
+		this->ObjectiveState->SetInProgress();
+	}
+	else
+	{
+		ensureMsgf(false, TEXT("UObjective::SetInProgress failed: ObjectiveState is Invalid"));
+	}
+	
 	this->Running = true;
 	this->Scheduled = true;
 }
-
-/*void FObjectiveData::SetScheduled()
-{
-	this->Scheduled = true;
-}
-
-void FObjectiveData::SetNotScheduled()
-{
-	this->Scheduled = false;
-}*/
 
 EObjectiveState FObjectiveData::Evaluate() const
 {
 	EObjectiveState CurrentState = EObjectiveState::Pending;
 	
-	if (ObjectiveState)
+	if (IsValid(this->ObjectiveState))
 	{
 		CurrentState = ObjectiveState->Evaluate();
+	}
+	else
+	{
+		ensureMsgf(false, TEXT("UObjective::Evaluate failed: ObjectiveState is Invalid"));
 	}
 	
 	return CurrentState;
@@ -62,6 +82,18 @@ EObjectiveState FObjectiveData::Evaluate() const
 
 void FObjectiveData::UpdateObjectiveState(UObjectiveState* ObjectiveStateIn) const
 {
+	if (!IsValid(this->ObjectiveState))
+	{
+		ensureMsgf(false, TEXT("UObjective::UpdateObjectiveState failed: ObjectiveState is Invalid"));
+		return;
+	}
+
+	if (!IsValid(ObjectiveStateIn))
+	{
+		ensureMsgf(false, TEXT("UObjective::UpdateObjectiveState failed: ObjectiveStateIn is Invalid"));
+		return;
+	}
+	
 	this->ObjectiveState->UpdateFromCopy(ObjectiveStateIn);
 }
 
@@ -74,7 +106,16 @@ FObjectiveData FObjectiveData::GetCopy() const
 	ObjectiveData.Title = this->Title;
 	ObjectiveData.Description = this->Description;
 	ObjectiveData.ObjectiveTime = this->ObjectiveTime;
-	ObjectiveData.ObjectiveState = this->ObjectiveState->GetCopy();
+
+	if (IsValid(this->ObjectiveState))
+	{
+		ObjectiveData.ObjectiveState = this->ObjectiveState->GetCopy();
+	}
+	else
+	{
+		ensureMsgf(false, TEXT("UObjective::GetCopy failed: ObjectiveState is Invalid"));
+	}
+	
 	ObjectiveData.ObjectiveMarker = this->ObjectiveMarker;
 	ObjectiveData.SuccessObjectiveWorldID = this->SuccessObjectiveWorldID;
 	ObjectiveData.FailureObjectiveWorldID = this->FailureObjectiveWorldID;
@@ -110,6 +151,18 @@ void UObjective::SetFailureObjective(UObjective* FailureObjectiveIn)
 
 void UObjective::SetSuccessAndFailureObjectives(UObjective* SuccessObjectiveIn, UObjective* FailureObjectiveIn)
 {
+	if (!IsValid(SuccessObjectiveIn))
+	{
+		ensureMsgf(false, TEXT("UObjective::SetSuccessAndFailureObjectives failed: SuccessObjectiveIn is Invalid"));
+		return;	
+	}
+
+	if (!IsValid(FailureObjectiveIn))
+	{
+		ensureMsgf(false, TEXT("UObjective::SetSuccessAndFailureObjectives failed: FailureObjectiveIn is Invalid"));
+		return;
+	}
+	
 	this->SetSuccessObjective(SuccessObjectiveIn);
 	this->SetFailureObjective(FailureObjectiveIn);
 }
@@ -128,14 +181,24 @@ FObjectiveData UObjective::GetObjectiveData() const
 	ObjectiveData.Title = this->Title;
 	ObjectiveData.Description = this->Description;
 	ObjectiveData.ObjectiveTime = this->ObjectiveTime;
-	ObjectiveData.ObjectiveState = this->ObjectiveState->GetCopy();
+
+	if (IsValid(ObjectiveState))
+	{
+		ObjectiveData.ObjectiveState = this->ObjectiveState->GetCopy();
+	}
+	else
+	{
+		ensureMsgf(false, TEXT("UObjective::GetObjectiveData failed: ObjectiveState is Invalid"));
+	}
+
+	/* These 2 instances can be nullptr & we don't care if they are */
 	
-	if (this->SuccessObjective)
+	if (IsValid(this->SuccessObjective))
 	{
 		ObjectiveData.SuccessObjectiveWorldID = this->SuccessObjective->WorldID;
 	}
 
-	if (this->FailureObjective)
+	if (IsValid(this->FailureObjective))
 	{
 		ObjectiveData.FailureObjectiveWorldID = this->FailureObjective->WorldID;
 	}

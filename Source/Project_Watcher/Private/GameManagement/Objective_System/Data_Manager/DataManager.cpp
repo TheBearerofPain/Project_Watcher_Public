@@ -8,42 +8,65 @@
 
 void UDataManager::AddObjective(UObjective * NewObjective)
 {
-	if (NewObjective)
+	if (!IsValid(NewObjective))
 	{
-		const int32 NewObjectiveWorldID = NewObjective->WorldID;
+		ensureMsgf(false, TEXT("AddObjective failed: NewObjective is Invalid"));
+		return;
+	}
+	
+	const int32 NewObjectiveWorldID = NewObjective->WorldID;
+	const int64 CurrentTime = this->GetCurrentGameSeconds();
 		
-		if (NewObjective->ObjectiveTime.EvaluateAtScheduleTime)
-		{//Use the CurrentTime to compute start and end times!
-			NewObjective->ObjectiveTime.StartTime = this->GetCurrentGameSeconds() + NewObjective->ObjectiveTime.ScheduleStartTimeOffset;
-			NewObjective->ObjectiveTime.EndTime = this->GetCurrentGameSeconds() + NewObjective->ObjectiveTime.ScheduleStartTimeOffset + NewObjective->ObjectiveTime.ScheduleDuration;
-		}
+	if (NewObjective->ObjectiveTime.EvaluateAtScheduleTime)
+	{
+		NewObjective->ObjectiveTime.StartTime = CurrentTime + NewObjective->ObjectiveTime.ScheduleStartTimeOffset;
+		NewObjective->ObjectiveTime.EndTime = CurrentTime + NewObjective->ObjectiveTime.ScheduleStartTimeOffset + NewObjective->ObjectiveTime.ScheduleDuration;
+	}
 
-		/* Serialize Graph & Create Deep Copy then append onto main graph */
-		UObjectiveGraphSupport * ObjectiveGraphSupport = UObjectiveGraphSupport::Make();
-		const TMap<int32, FObjectiveData> ObjectiveSubGraph = ObjectiveGraphSupport->GetObjectiveDataGraphFromObjective(NewObjective);
-		this->Objectives.Append(ObjectiveSubGraph);
-		
-		if (this->CurrentGameTime > this->Objectives[NewObjectiveWorldID].ObjectiveTime.StartTime)
-		{//The Objective Is Running
-			if (this->Objectives[NewObjectiveWorldID].ObjectiveTime.NoTimer)
-			{
-				this->AddObjectiveNoTimer(NewObjectiveWorldID);
-			}
-			else
-			{
-				this->AddObjectiveRunning(NewObjectiveWorldID);
-			}
+	UObjectiveGraphSupport * ObjectiveGraphSupport = UObjectiveGraphSupport::Make();
+	if (!IsValid(ObjectiveGraphSupport))
+	{
+		ensureMsgf(false, TEXT("AddObjective failed: ObjectiveGraphSupport is Invalid"));
+		return;
+	}
+	
+	/* Serialize Graph & Create Deep Copy then append onto main graph */
+	const TMap<int32, FObjectiveData> ObjectiveSubGraph = ObjectiveGraphSupport->GetObjectiveDataGraphFromObjective(NewObjective);
+	this->Objectives.Append(ObjectiveSubGraph);
+	
+	if (!this->Objectives.Contains(NewObjectiveWorldID))
+	{
+		ensureMsgf(false, TEXT("AddObjective failed: Objective: %d, Wasn't added to objective map!"), NewObjectiveWorldID);
+		return;
+	}
+
+	if (CurrentTime > this->Objectives[NewObjectiveWorldID].ObjectiveTime.StartTime)
+	{
+		if (this->Objectives[NewObjectiveWorldID].ObjectiveTime.NoTimer)
+		{//The Objective Is Running, But is never going to expire
+			this->AddObjectiveNoTimer(NewObjectiveWorldID);
 		}
 		else
-		{//The Objective Is Pending
-			this->AddObjectivePending(NewObjectiveWorldID);
+		{//The Objective Is Running
+			this->AddObjectiveRunning(NewObjectiveWorldID);
 		}
+	}
+	else
+	{//The Objective Is Pending
+		this->AddObjectivePending(NewObjectiveWorldID);
 	}
 }
 
 UObjective * UDataManager::CreateObjective(const FString& Title, const FString& Description, UObjectiveState * ObjectiveState, const FObjectiveTime& ObjectiveTime)
 {
 	UObjective * NewObjective = NewObject<UObjective>();
+
+	if (!IsValid(NewObjective))
+	{
+		ensureMsgf(false, TEXT("CreateObjective failed: NewObjective is Invalid"));
+		return nullptr;
+	}
+	
 	NewObjective->Setup(this->GetWorldID(), Title, Description, ObjectiveState, ObjectiveTime);
 	return NewObjective;
 }
@@ -52,6 +75,13 @@ UObjective* UDataManager::CreateObjectiveWithSuccessObjective(const FString& Tit
 	UObjectiveState* ObjectiveState, const FObjectiveTime& ObjectiveTime, UObjective* SuccessObjective)
 {
 	UObjective * NewObjective = NewObject<UObjective>();
+
+	if (!IsValid(NewObjective))
+	{
+		ensureMsgf(false, TEXT("CreateObjectiveWithSuccessObjective failed: NewObjective is Invalid"));
+		return nullptr;
+	}
+	
 	NewObjective->Setup(this->GetWorldID(), Title, Description, ObjectiveState, ObjectiveTime);
 	NewObjective->SetSuccessObjective(SuccessObjective);
 	return NewObjective;
@@ -61,6 +91,13 @@ UObjective* UDataManager::CreateObjectiveWithFailureObjective(const FString& Tit
 	UObjectiveState* ObjectiveState, const FObjectiveTime& ObjectiveTime, UObjective* FailureObjective)
 {
 	UObjective * NewObjective = NewObject<UObjective>();
+
+	if (!IsValid(NewObjective))
+	{
+		ensureMsgf(false, TEXT("CreateObjectiveWithFailureObjective failed: NewObjective is Invalid"));
+		return nullptr;
+	}
+	
 	NewObjective->Setup(this->GetWorldID(), Title, Description, ObjectiveState, ObjectiveTime);
 	NewObjective->SetFailureObjective(FailureObjective);
 	return NewObjective;
@@ -71,6 +108,13 @@ UObjective* UDataManager::CreateObjectiveWithSuccessAndFailureObjectives(const F
 	UObjective* SuccessObjective, UObjective* FailureObjective)
 {
 	UObjective * NewObjective = NewObject<UObjective>();
+
+	if (!IsValid(NewObjective))
+	{
+		ensureMsgf(false, TEXT("CreateObjectiveWithSuccessAndFailureObjectives failed: NewObjective is Invalid"));
+		return nullptr;
+	}
+	
 	NewObjective->Setup(this->GetWorldID(), Title, Description, ObjectiveState, ObjectiveTime);
 	NewObjective->SetSuccessAndFailureObjectives(SuccessObjective, FailureObjective);
 	return NewObjective;
@@ -97,44 +141,70 @@ void UDataManager::RemoveObjective(const int32 ObjectiveWorldID)
 
 void UDataManager::UpdateObjectiveState(const int32 ObjectiveWorldID, UObjectiveState * ObjectiveState)
 {
-	if (this->Objectives.Contains(ObjectiveWorldID) && ObjectiveState)
+	if (!IsValid(ObjectiveState))
 	{
-		if (this->Objectives[ObjectiveWorldID].Running)
-		{//We can only update running objectives states
-			this->Objectives[ObjectiveWorldID].UpdateObjectiveState(ObjectiveState);
-		
-			switch (this->EvaluateObjective(ObjectiveWorldID))
+		ensureMsgf(false, TEXT("UpdateObjectiveState failed: ObjectiveState is Invalid"));
+		return;
+	}
+
+	if (!this->Objectives.Contains(ObjectiveWorldID))
+	{
+		ensureMsgf(false, TEXT("UpdateObjectiveState failed: Objective list doesn't contain ObjectiveWorldID: %d"), ObjectiveWorldID);
+		return;
+	}
+	
+	if (this->Objectives[ObjectiveWorldID].Running)
+	{
+		//We can only update running objectives states
+		this->Objectives[ObjectiveWorldID].UpdateObjectiveState(ObjectiveState);
+	
+		switch (this->EvaluateObjective(ObjectiveWorldID))
+		{
+		case EObjectiveState::Failed:
+					
+			this->CallObjectiveFailedDelegate(ObjectiveWorldID);
+			
+			if (const int32 FailureObjectiveWorldID = this->Objectives[ObjectiveWorldID].FailureObjectiveWorldID; FailureObjectiveWorldID != -1)
 			{
-			case EObjectiveState::Failed:
-					
-				this->CallObjectiveFailedDelegate(ObjectiveWorldID);
-				this->RemoveObjective(ObjectiveWorldID);
-				if (const int32 FailureObjectiveWorldID = this->Objectives[ObjectiveWorldID].FailureObjectiveWorldID; FailureObjectiveWorldID != -1)
-				{
-					this->ScheduleObjective(FailureObjectiveWorldID);
-				}
+				this->ScheduleObjective(FailureObjectiveWorldID);
+			}
 
-				this->UpdateRunningTimerUntilNextObjective();
+			this->RemoveObjective(ObjectiveWorldID);
+			this->UpdateRunningTimerUntilNextObjective();
 						
-				break;
-			case EObjectiveState::Completed:
+			break;
+		case EObjectiveState::Completed:
 
-				this->CallObjectiveCompleteDelegate(ObjectiveWorldID);
-				this->RemoveObjective(ObjectiveWorldID);
+			this->CallObjectiveCompleteDelegate(ObjectiveWorldID);
 					
-				if (const int32 SuccessObjectiveWorldID = this->Objectives[ObjectiveWorldID].SuccessObjectiveWorldID; SuccessObjectiveWorldID != -1)
-				{
-					this->ScheduleObjective(SuccessObjectiveWorldID);
-				}
+			if (const int32 SuccessObjectiveWorldID = this->Objectives[ObjectiveWorldID].SuccessObjectiveWorldID; SuccessObjectiveWorldID != -1)
+			{
+				this->ScheduleObjective(SuccessObjectiveWorldID);
+			}
+
+			this->RemoveObjective(ObjectiveWorldID);
+			this->UpdateRunningTimerUntilNextObjective();
 				
-				this->UpdateRunningTimerUntilNextObjective();
-				
-				break;
-			default:
-				break;
-			}//Switch
+			break;
+		default:
+			break;
 		}
 	}
+	else
+	{
+		UE_LOG(LogTemp, Display, TEXT("Attempted to Update a NON RUNNING Objective"));
+	}
+}
+
+FObjectiveData UDataManager::GetObjective(const int32 ObjectiveWorldID)
+{	
+	if (!this->Objectives.Contains(ObjectiveWorldID))
+	{
+		ensureMsgf(false, TEXT("GetObjective failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return FObjectiveData();
+	}
+
+	return this->Objectives[ObjectiveWorldID].GetCopy();
 }
 
 int64 UDataManager::GetCurrentGameSeconds() const
@@ -388,21 +458,29 @@ void UDataManager::LogSparseObjectiveLists()
 
 void UDataManager::ScheduleObjective(const int32 ObjectiveWorldID)
 {
-	if (this->Objectives[ObjectiveWorldID].ObjectiveTime.EvaluateAtScheduleTime)
-	{//Use the CurrentTime to compute start and end times!
-		const FObjectiveTime CachedObjectiveTime = this->Objectives[ObjectiveWorldID].ObjectiveTime;
-		this->Objectives[ObjectiveWorldID].ObjectiveTime.StartTime = this->GetCurrentGameSeconds() + CachedObjectiveTime.ScheduleStartTimeOffset;
-		this->Objectives[ObjectiveWorldID].ObjectiveTime.EndTime = this->GetCurrentGameSeconds() + CachedObjectiveTime.ScheduleStartTimeOffset + CachedObjectiveTime.ScheduleDuration;
+	if (!Objectives.Contains(ObjectiveWorldID))
+	{
+		ensureMsgf(false, TEXT("ScheduleObjective failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
 	}
 
-	if (this->CurrentGameTime > this->Objectives[ObjectiveWorldID].ObjectiveTime.StartTime)
-	{//The Objective Is Running
-		if (this->Objectives[ObjectiveWorldID].ObjectiveTime.NoTimer)
-		{
+	const int64 CurrentTime = this->GetCurrentGameSeconds();
+	const FObjectiveTime CachedObjectiveTime = this->Objectives[ObjectiveWorldID].ObjectiveTime;
+	
+	if (CachedObjectiveTime.EvaluateAtScheduleTime)
+	{
+		this->Objectives[ObjectiveWorldID].ObjectiveTime.StartTime = CurrentTime + CachedObjectiveTime.ScheduleStartTimeOffset;
+		this->Objectives[ObjectiveWorldID].ObjectiveTime.EndTime = CurrentTime + CachedObjectiveTime.ScheduleStartTimeOffset + CachedObjectiveTime.ScheduleDuration;
+	}
+
+	if (CurrentTime > this->Objectives[ObjectiveWorldID].ObjectiveTime.StartTime)
+	{
+		if (CachedObjectiveTime.NoTimer)
+		{//The Objective Is Running, But will not expire
 			this->AddObjectiveNoTimer(ObjectiveWorldID);
 		}
 		else
-		{
+		{//The Objective Is Running
 			this->AddObjectiveRunning(ObjectiveWorldID);
 		}
 	}
@@ -414,28 +492,37 @@ void UDataManager::ScheduleObjective(const int32 ObjectiveWorldID)
 
 void UDataManager::ScheduleRawObjective(const int32 ObjectiveWorldID)
 {
-	if (this->Objectives.Contains(ObjectiveWorldID))
+	if (!this->Objectives.Contains(ObjectiveWorldID))
 	{
-		if (this->CurrentGameTime > this->Objectives[ObjectiveWorldID].ObjectiveTime.StartTime)
-		{//The Objective Is Running
-			if (this->Objectives[ObjectiveWorldID].ObjectiveTime.NoTimer)
-			{
-				this->AddObjectiveNoTimer(ObjectiveWorldID);
-			}
-			else
-			{
-				this->AddObjectiveRunning(ObjectiveWorldID);
-			}
+		ensureMsgf(false, TEXT("ScheduleRawObjective failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
+	}
+	
+	if (this->GetCurrentGameSeconds() > this->Objectives[ObjectiveWorldID].ObjectiveTime.StartTime)
+	{
+		if (this->Objectives[ObjectiveWorldID].ObjectiveTime.NoTimer)
+		{//The Objective Is Running, But will not expire
+			this->AddObjectiveNoTimer(ObjectiveWorldID);
 		}
 		else
-		{//The Objective Is Pending
-			this->AddObjectivePending(ObjectiveWorldID);
+		{//The Objective Is Running
+			this->AddObjectiveRunning(ObjectiveWorldID);
 		}
+	}
+	else
+	{//The Objective Is Pending
+		this->AddObjectivePending(ObjectiveWorldID);
 	}
 }
 
 void UDataManager::AddObjectiveRunning(const int32 ObjectiveWorldID)
 {
+	if (!this->Objectives.Contains(ObjectiveWorldID))
+	{
+		ensureMsgf(false, TEXT("AddObjectiveRunning failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
+	}
+	
 	this->Objectives[ObjectiveWorldID].SetInProgress();
 	
 	if (RunningObjectives.IsEmpty())
@@ -445,24 +532,34 @@ void UDataManager::AddObjectiveRunning(const int32 ObjectiveWorldID)
 	}
 	else
 	{
-		for (int i = 0; i < RunningObjectives.Num(); i++)
+		const int64 CachedObjectiveEndTime = this->Objectives[ObjectiveWorldID].ObjectiveTime.EndTime;
+		for (int32 i = 0; i < RunningObjectives.Num(); i++)
 		{
-			if (this->Objectives[this->RunningObjectives[i]].ObjectiveTime.EndTime > this->Objectives[ObjectiveWorldID].ObjectiveTime.EndTime)
+			if (this->Objectives[this->RunningObjectives[i]].ObjectiveTime.EndTime > CachedObjectiveEndTime)
 			{
-				RunningObjectives.Insert(ObjectiveWorldID,i);
+				this->RunningObjectives.Insert(ObjectiveWorldID,i);
 
 				if (i == 0)
 				{//We inserted into the first position Update the Timer!
 					this->UpdateRunningTimerUntilNextObjective();
 				}
-				break;
-			}//if
-		}//for
-	}//if
+				return;
+			}
+		}
+
+		/* Add at the end if we didn't insert prior */
+		this->RunningObjectives.Add(ObjectiveWorldID);
+	}
 }
 
 void UDataManager::AddObjectivePending(const int32 ObjectiveWorldID)
 {
+	if (!this->Objectives.Contains(ObjectiveWorldID))
+	{
+		ensureMsgf(false, TEXT("AddObjectivePending failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
+	}
+	
 	this->Objectives[ObjectiveWorldID].SetPending();
 	
 	if (PendingObjectives.IsEmpty())
@@ -472,9 +569,10 @@ void UDataManager::AddObjectivePending(const int32 ObjectiveWorldID)
 	}
 	else
 	{
-		for (int i = 0; i < PendingObjectives.Num(); i++)
+		const int64 CachedObjectiveStartTime = this->Objectives[ObjectiveWorldID].ObjectiveTime.StartTime;
+		for (int32 i = 0; i < PendingObjectives.Num(); i++)
 		{
-			if (this->Objectives[this->PendingObjectives[i]].ObjectiveTime.StartTime > this->Objectives[ObjectiveWorldID].ObjectiveTime.StartTime)
+			if (this->Objectives[this->PendingObjectives[i]].ObjectiveTime.StartTime > CachedObjectiveStartTime)
 			{
 				PendingObjectives.Insert(ObjectiveWorldID,i);
 
@@ -482,14 +580,23 @@ void UDataManager::AddObjectivePending(const int32 ObjectiveWorldID)
 				{//We inserted into the first position Update the Timer!
 					this->UpdatePendingTimerUntilNextObjective();
 				}
-				break;
-			}//if
-		}//for
-	}//if
+				return;
+			}
+		}
+
+		/* Add at the end if we didn't insert prior */
+		this->PendingObjectives.Add(ObjectiveWorldID);
+	}
 }
 
 void UDataManager::AddObjectiveNoTimer(const int32 ObjectiveWorldID)
 {
+	if (!this->Objectives.Contains(ObjectiveWorldID))
+	{
+		ensureMsgf(false, TEXT("AddObjectiveNoTimer failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
+	}
+	
 	this->Objectives[ObjectiveWorldID].SetInProgress();
 	NoTimerObjectives.Add(ObjectiveWorldID);
 }
@@ -498,11 +605,25 @@ void UDataManager::UpdateRunningTimerUntilNextObjective()
 {
 	if (!RunningObjectives.IsEmpty())
 	{//Update the set timer with whatever is in the 0th position
-		const float Rate = static_cast<float>(FMath::Min(this->Objectives[this->RunningObjectives[0]].ObjectiveTime.EndTime - FDateTime::UtcNow().ToUnixTimestamp(), 0));
+		const float Rate = static_cast<float>(FMath::Max(this->Objectives[this->RunningObjectives[0]].ObjectiveTime.EndTime - this->GetCurrentGameSeconds(), 0));
+
+		if (!IsValid(GetWorld()))
+		{
+			ensureMsgf(false, TEXT("UWorld is Invalid"));
+			return;
+		}
+		
 		GetWorld()->GetTimerManager().SetTimer(this->RunningObjectiveTimerHandle, this, &UDataManager::ObjectiveRunningTimerComplete, Rate, false);
 	}
 	else
 	{//If nothing is present clear the timer
+
+		if (!IsValid(GetWorld()))
+		{
+			ensureMsgf(false, TEXT("UWorld is Invalid"));
+			return;
+		}
+		
 		GetWorld()->GetTimerManager().ClearTimer(this->RunningObjectiveTimerHandle);
 	}
 }
@@ -512,99 +633,162 @@ void UDataManager::UpdatePendingTimerUntilNextObjective()
 	if (PendingObjectives.Num() > 0)
 	{//Update the set timer with whatever is in the 0th position
 		//Need to evaluate times better!!!
-		const float Rate = static_cast<float>(FMath::Min(this->Objectives[this->PendingObjectives[0]].ObjectiveTime.StartTime - FDateTime::UtcNow().ToUnixTimestamp(),0));
+		const float Rate = static_cast<float>(FMath::Max(this->Objectives[this->PendingObjectives[0]].ObjectiveTime.StartTime - this->GetCurrentGameSeconds(),0));
+
+		if (!IsValid(GetWorld()))
+		{
+			ensureMsgf(false, TEXT("UWorld is Invalid"));
+			return;
+		}
+		
 		GetWorld()->GetTimerManager().SetTimer(this->PendingObjectiveTimerHandle, this, &UDataManager::ObjectivePendingTimerComplete, Rate, false);
 	}
 	else
 	{//If nothing is present clear the timer
+
+		if (!IsValid(GetWorld()))
+		{
+			ensureMsgf(false, TEXT("UWorld is Invalid"));
+			return;
+		}
+		
 		GetWorld()->GetTimerManager().ClearTimer(this->PendingObjectiveTimerHandle);
 	}
 }
 
 void UDataManager::ObjectiveRunningTimerComplete()
 {
-	if (!this->RunningObjectives.IsEmpty())
+	if (this->RunningObjectives.IsEmpty())
 	{
-		if (const int32 ObjectiveWorldID = this->RunningObjectives[0]; this->Objectives.Contains(ObjectiveWorldID))
+		ensureMsgf(false, TEXT("Running Objective list is empty, nothing to update!"));
+		return;
+	}
+	
+	if (const int32 ObjectiveWorldID = this->RunningObjectives[0]; this->Objectives.Contains(ObjectiveWorldID))
+	{
+		//Add the Failure Objective IF it exists to the list of running objectives
+		if (const int32 FailureObjectiveWorldID = this->Objectives[ObjectiveWorldID].FailureObjectiveWorldID; FailureObjectiveWorldID != -1)
 		{
-			//Add the Failure Objective IF it exists to the list of running objectives
-			if (const int32 FailureObjectiveWorldID = this->Objectives[ObjectiveWorldID].FailureObjectiveWorldID; FailureObjectiveWorldID != -1)
-			{
-				this->ScheduleObjective(FailureObjectiveWorldID);
-			}
-			
-			this->CallObjectiveTimerExpiredDelegate(ObjectiveWorldID);
-			this->RunningObjectives.RemoveAt(0);
-			this->Objectives.Remove(ObjectiveWorldID);
-			this->UpdateRunningTimerUntilNextObjective();
+			this->ScheduleObjective(FailureObjectiveWorldID);
 		}
-	}	
+			
+		this->CallObjectiveTimerExpiredDelegate(ObjectiveWorldID);
+		this->RunningObjectives.RemoveAt(0);
+		this->Objectives.Remove(ObjectiveWorldID);
+		this->UpdateRunningTimerUntilNextObjective();
+	}
+	else
+	{
+		ensureMsgf(false, TEXT("ObjectiveRunningTimerComplete failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+	}
 }
 
 void UDataManager::ObjectivePendingTimerComplete()
 {
-	if (!this->PendingObjectives.IsEmpty())
+	if (this->PendingObjectives.IsEmpty())
+	{	
+		ensureMsgf(false, TEXT("Pending Objective list is empty, nothing to update!"));
+		return;
+	}
+	
+	if (const int32 ObjectiveWorldID = this->PendingObjectives[0]; this->Objectives.Contains(ObjectiveWorldID))
 	{
-		if (const int32 ObjectiveWorldID = this->PendingObjectives[0]; this->Objectives.Contains(ObjectiveWorldID))
+		if (this->Objectives[ObjectiveWorldID].ObjectiveTime.NoTimer)
 		{
-			if (this->Objectives[ObjectiveWorldID].ObjectiveTime.NoTimer)
-			{
-				this->AddObjectiveNoTimer(ObjectiveWorldID);
-			}
-			else
-			{
-				this->AddObjectiveRunning(ObjectiveWorldID);
-			}
-			
-			this->CallObjectiveTimerStartedDelegate(ObjectiveWorldID);
-			this->PendingObjectives.RemoveAt(0);
-			this->UpdatePendingTimerUntilNextObjective();
+			this->AddObjectiveNoTimer(ObjectiveWorldID);
 		}
+		else
+		{
+			this->AddObjectiveRunning(ObjectiveWorldID);
+		}
+			
+		this->CallObjectiveTimerStartedDelegate(ObjectiveWorldID);
+		this->PendingObjectives.RemoveAt(0);
+		this->UpdatePendingTimerUntilNextObjective();
+	}
+	else
+	{
+		ensureMsgf(false, TEXT("ObjectivePendingTimerComplete failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
 	}
 }
 
 void UDataManager::CallObjectiveCompleteDelegate(const int32 ObjectiveWorldID) const
 {
-	if (ObjectiveCompleteDelegate.IsBound() && this->Objectives.Contains(ObjectiveWorldID))
+	if (!ObjectiveCompleteDelegate.IsBound())
 	{
-		ObjectiveCompleteDelegate.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
+		UE_LOG(LogTemp, Warning, TEXT("Nothing Bound to ObjectiveCompleteDelegate"));
+		return;
 	}
+
+	if (!this->Objectives.Contains(ObjectiveWorldID))
+	{
+		ensureMsgf(false, TEXT("CallObjectiveCompleteDelegate failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
+	}
+	
+	ObjectiveCompleteDelegate.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
 }
 
 void UDataManager::CallObjectiveFailedDelegate(const int32 ObjectiveWorldID) const
 {
-	if (ObjectiveFailedDelegate.IsBound() && this->Objectives.Contains(ObjectiveWorldID))
+	if (!ObjectiveFailedDelegate.IsBound())
 	{
-		ObjectiveFailedDelegate.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
+		UE_LOG(LogTemp, Warning, TEXT("Nothing Bound to ObjectiveFailedDelegate"));
+		return;
 	}
+
+	if (!this->Objectives.Contains(ObjectiveWorldID))
+	{
+		ensureMsgf(false, TEXT("CallObjectiveFailedDelegate failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
+	}
+	
+	ObjectiveFailedDelegate.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
 }
 
 void UDataManager::CallObjectiveTimerExpiredDelegate(const int32 ObjectiveWorldID) const
 {
-	if (ObjectiveExpiredDelegate.IsBound() && this->Objectives.Contains(ObjectiveWorldID))
+	if (!ObjectiveExpiredDelegate.IsBound())
 	{
-		ObjectiveExpiredDelegate.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
+		UE_LOG(LogTemp, Warning, TEXT("Nothing Bound to ObjectiveExpiredDelegate"));
+		return;
 	}
+
+	if (!this->Objectives.Contains(ObjectiveWorldID))
+	{
+		ensureMsgf(false, TEXT("CallObjectiveTimerExpiredDelegate failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
+	}
+	
+	ObjectiveExpiredDelegate.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
 }
 
 void UDataManager::CallObjectiveTimerStartedDelegate(const int32 ObjectiveWorldID) const
 {
-	if (ObjectiveStartedDelegate.IsBound() && this->Objectives.Contains(ObjectiveWorldID))
+	if (!ObjectiveStartedDelegate.IsBound())
 	{
-		ObjectiveStartedDelegate.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
+		UE_LOG(LogTemp, Warning, TEXT("Nothing Bound to ObjectiveStartedDelegate"));
+		return;
 	}
+
+	if (!this->Objectives.Contains(ObjectiveWorldID))
+	{
+		ensureMsgf(false, TEXT("CallObjectiveTimerStartedDelegate failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
+	}
+	
+	ObjectiveStartedDelegate.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
 }
 
 EObjectiveState UDataManager::EvaluateObjective(const int32 ObjectiveWorldID)
 {
-	EObjectiveState ObjectiveState = EObjectiveState::Pending;
-	
-	if (this->Objectives.Contains(ObjectiveWorldID))
+	if (!this->Objectives.Contains(ObjectiveWorldID))
 	{
-		ObjectiveState = this->Objectives[ObjectiveWorldID].Evaluate();
+		ensureMsgf(false, TEXT("EvaluateObjective failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return EObjectiveState::Pending;
 	}
-	
-	return ObjectiveState;
+
+	return this->Objectives[ObjectiveWorldID].Evaluate();
 }
 
 int64 UDataManager::ComputeTimeAnchor(const ETimeAnchor TimeAnchor)

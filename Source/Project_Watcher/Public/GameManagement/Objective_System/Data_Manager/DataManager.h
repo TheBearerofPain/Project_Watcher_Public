@@ -76,10 +76,10 @@ private:
 	UPROPERTY()
 	TMap<int32, FObjectiveData> Objectives;
 
-	//Objective Timer Handle for when the next soonest objective expires
+	/* Objective Timer Handle for when the next soonest objective expires */
 	FTimerHandle RunningObjectiveTimerHandle;
 
-	//Objective Timer Handle for when the next soonest objective starts
+	/* Objective Timer Handle for when the next soonest objective starts */
 	FTimerHandle PendingObjectiveTimerHandle;
 
 	//Objective State//
@@ -113,6 +113,7 @@ private:
 
 	//World ID State//
 
+	/* Unique World ID Counter */
 	int32 WorldID = 0;
 	
 	//World ID State//
@@ -121,19 +122,19 @@ public:
 
 	//Objective State//
 	
-	//Objective Delegate fires when an objective's completed state has been evaluated as completed
+	/* Objective Delegate fires when an objective's completed state has been evaluated as completed */
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveCompleteDelegate;
 
-	//Objective Delegate fires when an objective's completed state has been evaluated as failed
+	/* Objective Delegate fires when an objective's completed state has been evaluated as failed */
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveFailedDelegate;
 	
-	//Objective Delegate fires when an objective's timer has expired
+	/* Objective Delegate fires when an objective's timer has expired */
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveExpiredDelegate;
 
-	//Objective Delegate fires when an objective's timer has started
+	/* Objective Delegate fires when an objective's timer has started */
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveStartedDelegate;
 
@@ -200,6 +201,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Objective")
 	void UpdateObjectiveState(const int32 ObjectiveWorldID, UObjectiveState * ObjectiveState);
 
+	/**
+	 * Retrieves an Objective with the given worldID,
+	 * If it doesn't exist you'll get back a blank objective
+	 * @param ObjectiveWorldID ObjectiveWorldID we are looking for
+	 * @return Objective, Or a blank Objective if none is found.
+	 */
+	FObjectiveData GetObjective(const int32 ObjectiveWorldID);
+	
 	//Objective State//
 
 	//Game Time State//
@@ -385,7 +394,7 @@ public:
 private:
 
 	// Internal //
-
+	
 	/**
 	 * Schedules an Objective that was already introduced to the graph but was not scheduled
 	 * @param ObjectiveWorldID Objective we are scheduling

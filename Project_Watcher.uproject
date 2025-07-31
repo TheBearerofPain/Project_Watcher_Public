@@ -45,6 +45,10 @@
 		{
 			"Name": "MassCrowd",
 			"Enabled": true
+		},
+		{
+			"Name": "FunctionalTestingEditor",
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [

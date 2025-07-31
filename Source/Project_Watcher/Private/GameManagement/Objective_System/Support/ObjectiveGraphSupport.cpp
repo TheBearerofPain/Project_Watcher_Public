@@ -1,18 +1,33 @@
 // Project Watcher 2024 & Beyond.
 
-
 #include "GameManagement/Objective_System/Support/ObjectiveGraphSupport.h"
 
 UObjectiveGraphSupport * UObjectiveGraphSupport::Make()
 {
-	UObjectiveGraphSupport * ObjectiveGraphSerializer = NewObject<UObjectiveGraphSupport>();	
+	UObjectiveGraphSupport * ObjectiveGraphSerializer = NewObject<UObjectiveGraphSupport>();
+
+	if (!IsValid(ObjectiveGraphSerializer))
+	{
+		ensureMsgf(false, TEXT("UObjectiveGraphSerializer::Make failed: Object is Invalid"));
+		return nullptr;
+	}
+	
 	return ObjectiveGraphSerializer;
 }
 
 TMap<int32, UObjective*> UObjectiveGraphSupport::SerializeObjective(UObjective * Objective)
-{
+{	
 	this->ObjectiveGraph.Empty();
-	this->SerializeGraph(Objective);
+
+	if (IsValid(Objective))
+	{
+		this->SerializeGraph(Objective);
+	}
+	else
+	{
+		ensureMsgf(false, TEXT("SerializeObjective failed: Objective is Invalid"));
+	}
+	
 	return this->ObjectiveGraph;
 }
 
@@ -22,7 +37,14 @@ TMap<int32, UObjective*> UObjectiveGraphSupport::SerializeObjectiveList(const TA
 
 	for (UObjective * Objective : Objectives)
 	{
-		this->SerializeGraph(Objective);
+		if (IsValid(Objective))
+		{
+			this->SerializeGraph(Objective);
+		}
+		else
+		{
+			ensureMsgf(false, TEXT("SerializeObjectiveList failed: Objective is Invalid"));
+		}
 	}
 	
 	return this->ObjectiveGraph;
@@ -31,14 +53,30 @@ TMap<int32, UObjective*> UObjectiveGraphSupport::SerializeObjectiveList(const TA
 TMap<int32, FObjectiveData> UObjectiveGraphSupport::GetObjectiveDataGraphFromObjective(UObjective* Objective)
 {
 	TMap<int32, FObjectiveData> ObjectiveDataGraph;
-	TMap<int32, UObjective*> SourceObjectiveGraph = this->SerializeObjective(Objective);
+	TMap<int32, UObjective*> SourceObjectiveGraph;
+	
+	if (IsValid(Objective))
+	{
+		SourceObjectiveGraph = this->SerializeObjective(Objective);
+	}
+	else
+	{
+		ensureMsgf(false, TEXT("GetObjectiveDataGraphFromObjective failed: Objective is Invalid"));
+	}
 
 	TArray<int32> Keys;
 	SourceObjectiveGraph.GetKeys(Keys);
 
 	for (const int32 Key : Keys)
 	{
-		ObjectiveDataGraph.Add(Key,SourceObjectiveGraph[Key]->GetObjectiveData());
+		if (const UObjective * CachedObjective = SourceObjectiveGraph[Key]; IsValid(CachedObjective))
+		{
+			ObjectiveDataGraph.Add(Key, CachedObjective->GetObjectiveData());
+		}
+		else
+		{
+			ensureMsgf(false, TEXT("GetObjectiveDataGraphFromObjective failed: Objective KeyPair is Invalid"));
+		}
 	}
 	
 	return ObjectiveDataGraph;
@@ -46,26 +84,33 @@ TMap<int32, FObjectiveData> UObjectiveGraphSupport::GetObjectiveDataGraphFromObj
 
 void UObjectiveGraphSupport::SerializeGraph(UObjective * Objective)
 {
-	//Add Root Objective if it isn't present in the TMap
-	if (!this->ObjectiveGraph.Contains(Objective->WorldID))
+	if (IsValid(Objective))
 	{
-		this->ObjectiveGraph.Add(Objective->WorldID, Objective);
-	}
-
-	//Check Children, Only Recurse on them if they are not present in the SerializationMap
-	if (Objective->SuccessObjective)
-	{
-		if (!this->ObjectiveGraph.Contains(Objective->SuccessObjective->WorldID))
+		if (!this->ObjectiveGraph.Contains(Objective->WorldID))
 		{
-			this->SerializeGraph(Objective->SuccessObjective);
+			this->ObjectiveGraph.Add(Objective->WorldID, Objective);
+		}
+
+		/* Check Children, Only Recurse on them if they are not present in the SerializationMap */
+	
+		if (IsValid(Objective->SuccessObjective))
+		{
+			if (!this->ObjectiveGraph.Contains(Objective->SuccessObjective->WorldID))
+			{
+				this->SerializeGraph(Objective->SuccessObjective);
+			}
+		}
+
+		if (IsValid(Objective->FailureObjective))
+		{
+			if (!this->ObjectiveGraph.Contains(Objective->FailureObjective->WorldID))
+			{
+				this->SerializeGraph(Objective->FailureObjective);
+			}
 		}
 	}
-
-	if (Objective->FailureObjective)
+	else
 	{
-		if (!this->ObjectiveGraph.Contains(Objective->FailureObjective->WorldID))
-		{
-			this->SerializeGraph(Objective->FailureObjective);
-		}
+		ensureMsgf(false, TEXT("SerializeGraph failed: Objective is Invalid"));
 	}
 }

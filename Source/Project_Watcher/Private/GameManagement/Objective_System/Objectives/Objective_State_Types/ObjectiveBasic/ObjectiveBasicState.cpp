@@ -1,25 +1,36 @@
 // Project Watcher 2024 & Beyond.
 
-
 #include "GameManagement/Objective_System/Objectives/Objective_State_Types/ObjectiveBasic/ObjectiveBasicState.h"
 
 UObjectiveState* UObjectiveBasicState::GetCopy()
 {
 	UObjectiveBasicState * Copy = NewObject<UObjectiveBasicState>();
 
-	Copy->ObjectiveState = this->ObjectiveState;
+	if (!IsValid(Copy))
+	{
+		ensureMsgf(false, TEXT("UObjectiveBasicState::GetCopy failed: object is Invalid"));
+		return nullptr;
+	}
 	
+	Copy->ObjectiveState = this->ObjectiveState;
 	return Copy;
 }
 
 void UObjectiveBasicState::UpdateFromCopy(UObjectiveState* ObjectiveStateIn)
 {
-	if (ObjectiveStateIn)
+	if (!IsValid(ObjectiveStateIn))
 	{
-		if (const UObjectiveBasicState * Source = Cast<UObjectiveBasicState>(ObjectiveStateIn))
-		{
-			this->ObjectiveState = Source->ObjectiveState;
-		}
+		ensureMsgf(false, TEXT("UObjectiveBasicState::UpdateFromCopy failed: ObjectiveStateIn is Invalid"));
+		return;
+	}
+
+	if (const UObjectiveBasicState * Source = Cast<UObjectiveBasicState>(ObjectiveStateIn))
+	{
+		this->ObjectiveState = Source->ObjectiveState;
+	}
+	else
+	{
+		ensureMsgf(false, TEXT("UObjectiveBasicState::UpdateFromCopy failed: Cast to UObjectiveBasicState failed"));
 	}
 }
 
