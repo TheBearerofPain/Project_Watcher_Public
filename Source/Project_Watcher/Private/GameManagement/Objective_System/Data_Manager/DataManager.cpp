@@ -6,6 +6,25 @@
 #include "GameManagement/Objective_System/Support/ObjectiveGraphSupport.h"
 #include "Kismet/GameplayStatics.h"
 
+UDataManager* UDataManager::Make(UWorld* World)
+{
+	if (!IsValid(World))
+	{
+		ensureMsgf(false, TEXT("UDataManager::Make failed: UWorld is Invalid"));
+		return nullptr;
+	}
+	
+	UDataManager * DataManager = NewObject<UDataManager>(World);
+
+	if (!IsValid(DataManager))
+	{
+		ensureMsgf(false, TEXT("UDataManager::Make failed: object is Invalid"));
+		return nullptr;
+	}
+
+	return DataManager;
+}
+
 void UDataManager::AddObjective(UObjective * NewObjective)
 {
 	if (!IsValid(NewObjective))

@@ -7,7 +7,6 @@
 #include "Tests/AutomationEditorCommon.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWorldIDCounterTest, "Project_Watcher.DataManager.Sync.WorldCounterTest", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWorldIDCounterWrapperTest, "Project_Watcher.DataManager.Sync.WorldIDCounterWrapperTest", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCreateObjectiveTest, "Project_Watcher.DataManager.Sync.CreateObjectiveTest", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -22,7 +21,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCreateObjectiveNullTest_W_Failure, "Project_Wa
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCreateObjectiveTest_W_Success_And_Failure, "Project_Watcher.DataManager.Sync.CreateObjectiveTest_W_Success_And_Failure", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCreateObjectiveNullTest_W_Success_And_Failure, "Project_Watcher.DataManager.Sync.CreateObjectiveNullTest_W_Success_And_Failure", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-IMPLEMENT_COMPLEX_AUTOMATION_TEST(FAddObjectiveTest, "Project_Watcher.DataManager.Sync.AddObjectiveTest", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::ClientContext)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAddObjectiveTest, "Project_Watcher.DataManager.Sync.AddObjectiveTest", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::ClientContext)
+
 
 /**
  * Test to see if the world id is being counted correctly
@@ -234,40 +234,33 @@ bool FCreateObjectiveNullTest_W_Success_And_Failure::RunTest(const FString& Para
 	return Passed;
 }
 
-void FAddObjectiveTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands) const
-{
-	OutBeautifiedNames.Add(TEXT("AddObjectiveTest"));
-	OutTestCommands.Add(TEXT(""));
-}
-
 bool FAddObjectiveTest::RunTest(const FString& Parameters)
-{	
-	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(true));
-	ADD_LATENT_AUTOMATION_COMMAND(FEngineWaitLatentCommand(1.0f));
-	ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand([this]()
+{
+	UDataManager * DataManager = UDataManager::Make(FAutomationEditorCommonUtils::CreateNewMap());
+
+	if (!IsValid(DataManager))
 	{
-		bool Passed = true;
-
-		UDataManager * DataManager = NewObject<UDataManager>();
-		const FString Title = TEXT("Title");
-		const FString Description = TEXT("Description");
-		UObjectiveBasicState * ObjectiveState = UObjectiveSupport::CreateBasicState();
-		constexpr FObjectiveTime ObjectiveTime = FObjectiveTime();
-
-		UObjective * Objective = DataManager->CreateObjective(Title, Description, ObjectiveState, ObjectiveTime);
-		DataManager->AddObjective(Objective);
-		const FObjectiveData ObjectiveCopy = DataManager->GetObjective(0);
-
-		Passed &= ObjectiveCopy.Title.Equals(Title);
-		Passed &= ObjectiveCopy.Description.Equals(Description);
-		Passed &= ObjectiveCopy.ObjectiveState != nullptr;
-		Passed &= ObjectiveCopy.ObjectiveTime.StartTime == -1;
-		Passed &= ObjectiveCopy.ObjectiveTime.EndTime == -1;
-		Passed &= ObjectiveCopy.SuccessObjectiveWorldID == -1;
-		Passed &= ObjectiveCopy.FailureObjectiveWorldID == -1;
+		UE_LOG(LogTemp, Warning, TEXT("DataManager is not valid"));
+		return false;
+	}
 		
-		return Passed;
-	}));
-	
-	return true;
+	const FString Title = TEXT("Title");
+	const FString Description = TEXT("Description");
+	UObjectiveBasicState * ObjectiveState = UObjectiveSupport::CreateBasicState();
+	constexpr FObjectiveTime ObjectiveTime = FObjectiveTime();
+
+	UObjective * Objective = DataManager->CreateObjective(Title, Description, ObjectiveState, ObjectiveTime);
+	DataManager->AddObjective(Objective);
+	const FObjectiveData ObjectiveCopy = DataManager->GetObjective(0);
+
+	bool Passed = true;
+	Passed &= ObjectiveCopy.Title.Equals(Title);
+	Passed &= ObjectiveCopy.Description.Equals(Description);
+	Passed &= ObjectiveCopy.ObjectiveState != nullptr;
+	Passed &= ObjectiveCopy.ObjectiveTime.StartTime == -1;
+	Passed &= ObjectiveCopy.ObjectiveTime.EndTime == -1;
+	Passed &= ObjectiveCopy.SuccessObjectiveWorldID == -1;
+	Passed &= ObjectiveCopy.FailureObjectiveWorldID == -1;
+		
+	return Passed;
 }

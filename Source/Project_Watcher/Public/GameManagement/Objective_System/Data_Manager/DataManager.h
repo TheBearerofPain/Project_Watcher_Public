@@ -138,6 +138,8 @@ public:
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveStartedDelegate;
 
+	static UDataManager * Make(UWorld * World);
+	
 	/**
 	 * Adds a new objective to the processor
 	 * @param NewObjective The Objective we are adding
