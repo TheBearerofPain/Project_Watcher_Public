@@ -231,43 +231,54 @@ int64 UDataManager::GetCurrentGameSeconds() const
 	return this->CurrentGameTime;
 }
 
+int64 UDataManager::GetGameTimeMultiplier() const
+{
+	return this->GameTimeMultiplier;
+}
+
 int64 UDataManager::RealWorldSecondsToGameSeconds(const int64 RealWorldSeconds) const
 {
-	return RealWorldSeconds * this->GameTimeMultiplier;
+	const int64 GameSeconds = RealWorldSeconds * this->GameTimeMultiplier;
+	ensureMsgf(GameSeconds > -1, TEXT("RealWorldSecondsToGameSeconds failed: Computed GameSeconds was %lld "), GameSeconds);
+	return FMath::Max(0, GameSeconds);
 }
 
 int64 UDataManager::RealWorldMinutesToGameSeconds(const int64 RealWorldMinutes) const
 {
-	return FMath::Max(0, RealWorldMinutes * 60 * this->GameTimeMultiplier);
+	const int64 GameSeconds = RealWorldMinutes * 60 * this->GameTimeMultiplier;
+	ensureMsgf(GameSeconds > -1, TEXT("RealWorldMinutesToGameSeconds failed: Computed GameSeconds was %lld "), GameSeconds);
+	return FMath::Max(0, GameSeconds);
 }
 
 int64 UDataManager::RealWorldHoursToGameSeconds(const int64 RealWorldHours) const
 {
-	return FMath::Max(0,RealWorldHours * 60 * 60 * this->GameTimeMultiplier);
+	const int64 GameSeconds = RealWorldHours * 60 * 60 * this->GameTimeMultiplier;
+	ensureMsgf(GameSeconds > -1, TEXT("RealWorldHoursToGameSeconds failed: Computed GameSeconds was %lld "), GameSeconds);
+	return FMath::Max(0,GameSeconds);
 }
 
 int64 UDataManager::RealWorldHoursAndMinutesToGameSeconds(const int64 RealWorldHours, const int64 RealWorldMinutes) const
 {
-	const int64 Seconds = (RealWorldHours * 60 * 60 * this->GameTimeMultiplier) + (RealWorldMinutes * 60 * this->GameTimeMultiplier);
-	return FMath::Max(0, Seconds);
+	const int64 GameSeconds = (RealWorldHours * 60 * 60 * this->GameTimeMultiplier) + (RealWorldMinutes * 60 * this->GameTimeMultiplier);
+	ensureMsgf(GameSeconds > -1, TEXT("RealWorldHoursAndMinutesToGameSeconds failed: Computed GameSeconds was %lld "), GameSeconds);
+	return FMath::Max(0, GameSeconds);
 }
 
 int64 UDataManager::GameDateToGameSeconds(const FDateTime& GameDate) const
 {
-	const int64 DateSeconds = FMath::Max(0, GameDate.ToUnixTimestamp() - this->GameAnchorDate.ToUnixTimestamp());
-	return DateSeconds;
+	const int64 GameSeconds = FMath::Max(0, GameDate.ToUnixTimestamp() - this->GameAnchorDate.ToUnixTimestamp());
+	return GameSeconds;
 }
 
 FDateTime UDataManager::GameSecondsToGameDate(const int64 GameSeconds) const
 {
-	const FDateTime Date = FDateTime( this->GameAnchorDate.ToUnixTimestamp() + GameSeconds );
+	const FDateTime Date = FDateTime::FromUnixTimestamp(this->GameAnchorDate.ToUnixTimestamp() + GameSeconds);
 	return Date;
 }
 
 FDateTime UDataManager::GetCurrentGameDate() const
 {
-	int64 CurrentTime = this->GameAnchorDate.ToUnixTimestamp();
-	CurrentTime += this->CurrentGameTime;
+	const int64 CurrentTime = this->GameAnchorDate.ToUnixTimestamp() + this->GetCurrentGameSeconds();
 	return FDateTime::FromUnixTimestamp(CurrentTime);
 }
 
@@ -834,11 +845,23 @@ int64 UDataManager::ComputeTimeAnchor(const ETimeAnchor TimeAnchor)
 
 void UDataManager::StartGameTimer()
 {
+	if (!IsValid(GetWorld()))
+	{
+		ensureMsgf(false, TEXT("UWorld is Invalid"));
+		return;
+	}
+	
 	this->GetWorld()->GetTimerManager().SetTimer(this->GameTimeTimerHandle,this, &UDataManager::UpdateCurrentGameTime,1, true);
 }
 
 void UDataManager::StopGameTimer()
 {
+	if (!IsValid(GetWorld()))
+	{
+		ensureMsgf(false, TEXT("UWorld is Invalid"));
+		return;
+	}
+	
 	this->GetWorld()->GetTimerManager().ClearTimer(this->GameTimeTimerHandle);
 }
 

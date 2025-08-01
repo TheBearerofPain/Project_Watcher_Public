@@ -3,7 +3,6 @@
 #include "GameManagement/Objective_System/Support/ObjectiveSupport.h"
 #include "Misc/AutomationTest.h"
 #include "Engine/World.h"
-#include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWorldIDCounterTest, "Project_Watcher.DataManager.Sync.WorldCounterTest", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

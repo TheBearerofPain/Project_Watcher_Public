@@ -138,6 +138,11 @@ public:
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveStartedDelegate;
 
+	/**
+	 * Used to Create a UDataManager Object for testing
+	 * @param World The UWorld we are assigning
+	 * @return Initialized UDataManager
+	 */
 	static UDataManager * Make(UWorld * World);
 	
 	/**
@@ -224,6 +229,13 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ObjectiveTime")
 	int64 GetCurrentGameSeconds() const;
 
+	/**
+	 * Returns the GameTimeMultiplier
+	 * @return GameTimeMultiplier
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ObjectiveTime")
+	int64 GetGameTimeMultiplier() const;
+	
 	/**
 	 * Converts Real World seconds to Game Seconds
 	 * @param RealWorldSeconds Real World Seconds
@@ -393,6 +405,22 @@ public:
 	
 	// Logging //
 
+	// Game State //
+
+	/**
+	 * Starts the Game Time timer
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DataManager")
+	void StartGameTimer();
+
+	/**
+	 * Stops the Game Time timer
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DataManager")
+	void StopGameTimer();
+	
+	// Game State //
+
 private:
 
 	// Internal //
@@ -523,16 +551,6 @@ private:
 	 * @return GameTime in seconds for the TimeAnchor
 	 */
 	int64 ComputeTimeAnchor(const ETimeAnchor TimeAnchor);
-
-	/**
-	 * Starts the Game Time timer
-	 */
-	void StartGameTimer();
-
-	/**
-	 * Stops the Game Time timer
-	 */
-	void StopGameTimer();
 	
 	/**
 	 * Increments the CurrentGameTime by GameTimeMultiplier
