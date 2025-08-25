@@ -211,7 +211,7 @@ void UDataManager::UpdateObjectiveState(const int32 ObjectiveWorldID, UObjective
 	}
 	else
 	{
-		UE_LOG(LogTemp, Display, TEXT("Attempted to Update a NON RUNNING Objective"));
+		UE_LOG(LogTemp, Warning, TEXT("Attempted to Update a NON RUNNING Objective"));
 	}
 }
 
@@ -744,32 +744,42 @@ void UDataManager::ObjectivePendingTimerComplete()
 
 void UDataManager::CallObjectiveCompleteDelegate(const int32 ObjectiveWorldID) const
 {
+	if (!this->Objectives.Contains(ObjectiveWorldID))
+	{
+		ensureMsgf(false, TEXT("CallObjectiveCompleteDelegate failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
+	}
+
+	if (ObjectiveCompleteDelegate_Internal.IsBound())
+	{
+		ObjectiveCompleteDelegate_Internal.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
+	}
+	
 	if (!ObjectiveCompleteDelegate.IsBound())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Nothing Bound to ObjectiveCompleteDelegate"));
 		return;
 	}
 
-	if (!this->Objectives.Contains(ObjectiveWorldID))
-	{
-		ensureMsgf(false, TEXT("CallObjectiveCompleteDelegate failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
-		return;
-	}
-	
 	ObjectiveCompleteDelegate.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
 }
 
 void UDataManager::CallObjectiveFailedDelegate(const int32 ObjectiveWorldID) const
 {
-	if (!ObjectiveFailedDelegate.IsBound())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Nothing Bound to ObjectiveFailedDelegate"));
-		return;
-	}
-
 	if (!this->Objectives.Contains(ObjectiveWorldID))
 	{
 		ensureMsgf(false, TEXT("CallObjectiveFailedDelegate failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
+	}
+
+	if (ObjectiveFailedDelegate_Internal.IsBound())
+	{
+		ObjectiveFailedDelegate_Internal.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
+	}
+	
+	if (!ObjectiveFailedDelegate.IsBound())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Nothing Bound to ObjectiveFailedDelegate"));
 		return;
 	}
 	
@@ -778,15 +788,20 @@ void UDataManager::CallObjectiveFailedDelegate(const int32 ObjectiveWorldID) con
 
 void UDataManager::CallObjectiveTimerExpiredDelegate(const int32 ObjectiveWorldID) const
 {
-	if (!ObjectiveExpiredDelegate.IsBound())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Nothing Bound to ObjectiveExpiredDelegate"));
-		return;
-	}
-
 	if (!this->Objectives.Contains(ObjectiveWorldID))
 	{
 		ensureMsgf(false, TEXT("CallObjectiveTimerExpiredDelegate failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
+	}
+
+	if (ObjectiveExpiredDelegate_Internal.IsBound())
+	{
+		ObjectiveExpiredDelegate_Internal.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
+	}
+	
+	if (!ObjectiveExpiredDelegate.IsBound())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Nothing Bound to ObjectiveExpiredDelegate"));
 		return;
 	}
 	
@@ -795,15 +810,20 @@ void UDataManager::CallObjectiveTimerExpiredDelegate(const int32 ObjectiveWorldI
 
 void UDataManager::CallObjectiveTimerStartedDelegate(const int32 ObjectiveWorldID) const
 {
-	if (!ObjectiveStartedDelegate.IsBound())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Nothing Bound to ObjectiveStartedDelegate"));
-		return;
-	}
-
 	if (!this->Objectives.Contains(ObjectiveWorldID))
 	{
 		ensureMsgf(false, TEXT("CallObjectiveTimerStartedDelegate failed: ObjectiveWorldID %d not found"), ObjectiveWorldID);
+		return;
+	}
+
+	if (ObjectiveStartedDelegate_Internal.IsBound())
+	{
+		ObjectiveStartedDelegate_Internal.Broadcast(this->Objectives[ObjectiveWorldID].GetCopy());
+	}
+	
+	if (!ObjectiveStartedDelegate.IsBound())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Nothing Bound to ObjectiveStartedDelegate"));
 		return;
 	}
 	

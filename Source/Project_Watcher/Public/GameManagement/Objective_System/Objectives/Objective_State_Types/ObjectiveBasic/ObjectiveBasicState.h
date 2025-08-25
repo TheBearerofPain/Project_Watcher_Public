@@ -15,11 +15,8 @@ UCLASS(BlueprintType)
 class PROJECT_WATCHER_API UObjectiveBasicState : public UObjectiveState , public IObjectiveBasic
 {
 	GENERATED_BODY()
-private:
-	
-	EObjectiveState ObjectiveState = EObjectiveState::Pending;
-
 public:
+	EObjectiveState ObjectiveState = EObjectiveState::Pending;
 
 	virtual UObjectiveState * GetCopy() override;
 

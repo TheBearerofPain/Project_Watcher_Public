@@ -16,9 +16,8 @@ UCLASS(BlueprintType)
 class PROJECT_WATCHER_API UObjectiveStrictSubObjectiveState : public UObjectiveState , public IObjectiveStrictSubObjective
 {
 	GENERATED_BODY()
-private:
-	TArray<FSubObjective> SubObjectiveList;
 public:
+	TArray<FSubObjective> SubObjectiveList;
 
 	virtual UObjectiveState * GetCopy() override;
 

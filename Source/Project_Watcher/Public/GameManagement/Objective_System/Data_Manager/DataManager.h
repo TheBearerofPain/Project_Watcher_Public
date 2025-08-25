@@ -7,7 +7,11 @@
 #include "GameManagement/Objective_System/Objectives/Objective.h"
 #include "DataManager.generated.h"
 
+/* For Blueprint Usage */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FObjectiveDelegate, const FObjectiveData&, Objective);
+
+/* For C++ Usage */
+DECLARE_MULTICAST_DELEGATE_OneParam(FObjectiveDelegate_Internal, const FObjectiveData& Objective);
 
 USTRUCT()
 struct PROJECT_WATCHER_API FDataManagerSaveState
@@ -126,17 +130,29 @@ public:
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveCompleteDelegate;
 
+	/* Objective Delegate fires when an objective's completed state has been evaluated as completed */
+	FObjectiveDelegate_Internal ObjectiveCompleteDelegate_Internal;
+
 	/* Objective Delegate fires when an objective's completed state has been evaluated as failed */
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveFailedDelegate;
+
+	/* Objective Delegate fires when an objective's completed state has been evaluated as failed */
+	FObjectiveDelegate_Internal ObjectiveFailedDelegate_Internal;
 	
 	/* Objective Delegate fires when an objective's timer has expired */
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveExpiredDelegate;
 
+	/* Objective Delegate fires when an objective's timer has expired */
+	FObjectiveDelegate_Internal ObjectiveExpiredDelegate_Internal;
+
 	/* Objective Delegate fires when an objective's timer has started */
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Objective")
 	FObjectiveDelegate ObjectiveStartedDelegate;
+
+	/* Objective Delegate fires when an objective's timer has started */
+	FObjectiveDelegate_Internal ObjectiveStartedDelegate_Internal;
 
 	/**
 	 * Used to Create a UDataManager Object for testing

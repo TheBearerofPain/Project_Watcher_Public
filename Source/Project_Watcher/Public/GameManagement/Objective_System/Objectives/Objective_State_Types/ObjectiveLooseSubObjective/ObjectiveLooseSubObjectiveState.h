@@ -15,10 +15,10 @@ UCLASS(BlueprintType)
 class PROJECT_WATCHER_API UObjectiveLooseSubObjectiveState : public UObjectiveState, public IObjectiveLooseSubObjective
 {
 	GENERATED_BODY()
-private:
-	TArray<FSubObjective> SubObjectiveList;
-	int32 CompletionThreshold = 1;
 public:
+	TArray<FSubObjective> SubObjectiveList;
+	
+	int32 CompletionThreshold = 1;
 
 	virtual UObjectiveState * GetCopy() override;
 
